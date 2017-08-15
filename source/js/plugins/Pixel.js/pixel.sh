@@ -95,6 +95,6 @@ scp ./source/css/diva.css ./build/css/
 read -p "Build and run on http://localhost:9001/ (You might get a JSHint failed message, that should be ok, Diva will be still running)? [y/n] " RUN
 if [ "$RUN" = "y" ]
 then
-echo "> gulp"
-gulp
+echo "> gulp develop:rodan"
+gulp develop:rodan
 fi

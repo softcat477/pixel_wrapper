@@ -11,8 +11,7 @@ RODAN_JOB_PACKAGES = (
   # Paths to other jobs
 )
 ```
-- In ```source/js/plugins/Pixel.js``` run ```./pixel.sh``` in terminal to install all dependencies.
-- Run ```gulp develop:rodan" to compile
+- In ```source/js/plugins/Pixel.js``` run ```./pixel.sh``` in terminal to install all dependencies and compile the project.
 - The wrapper should now be available to use in any workflows
 - For other information please refer to the [rodan job package documentation](https://github.com/DDMAL/Rodan/wiki/Write-a-Rodan-job-package)
 
