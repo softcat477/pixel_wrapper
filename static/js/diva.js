@@ -744,9 +744,10 @@
 	            var _this = this;
 	
 	            if (_typeof(this.settings.objectData) === 'object') {
+	                var self = this;
 	                // Defer execution until initialization has completed
 	                setTimeout(function () {
-	                    this._loadObjectData(this.settings.objectData, this.hashState);
+	                    self._loadObjectData(self.settings.objectData, self.hashState);
 	                }, 0);
 	            } else {
 	                var pendingManifestRequest = fetch(this.settings.objectData, {

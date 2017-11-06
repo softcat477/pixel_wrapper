@@ -2,10 +2,26 @@ import os
 from binascii import a2b_base64
 from rodan.settings import MEDIA_URL, MEDIA_ROOT
 from rodan.jobs.base import RodanTask
+from django.conf import settings
 
 def media_file_path_to_public_url(media_file_path):
     chars_to_remove = len(MEDIA_ROOT)
     return os.path.join(MEDIA_URL, media_file_path[chars_to_remove:])
+
+def get_iiif_query (resource_path):
+		resource_path = resource_path.split('/')
+		resource_path.remove('')
+		resource_path.remove('rodan')
+		resource_path.remove('data')
+		resource_path.remove('original_file.jpg')
+		resource_path.append('diva')
+		resource_path.append('image.jp2')
+		resource_path = '%2F'.join(resource_path)
+
+		server_url = settings.IIPSRV_URL
+		query = server_url + '?IIIF=' + resource_path
+    
+		return query
 
 class DivaInteractive(RodanTask):
     name = 'Pixel.js'
@@ -16,6 +32,13 @@ class DivaInteractive(RodanTask):
     category = 'Diva - Pixel.js'
     interactive = True
     input_port_types = [
+        {
+            'name': 'Image',
+            'resource_types': lambda mime: mime.startswith('image/'), 
+            'minimum': 1,
+            'maximum': 1,
+            'is_list': False
+        },
         {
             'name': 'PNG - Layer 1 Input',
             'resource_types': ['image/rgb+png'],
@@ -62,11 +85,15 @@ class DivaInteractive(RodanTask):
             'is_list': False
         },
     ]
+
     def get_my_interface(self, inputs, settings):
-	# Get input.
+		# Get input.
         layer1_url = ''
         layer2_url = ''
         layer3_url = ''
+
+        query_url = get_iiif_query(inputs['Image'][0]['resource_path'])
+
         if 'PNG - Layer 1 Input' in inputs:
             layer1_path = inputs['PNG - Layer 1 Input'][0]['resource_path']
             layer1_url = media_file_path_to_public_url(layer1_path)
@@ -81,6 +108,9 @@ class DivaInteractive(RodanTask):
 
     	# Create data to pass.
     	data = {
+    		'width': '20',
+    		'height': '40',
+    		'query_url': query_url,
             'layer1_url' : layer1_url,
             'layer2_url' : layer2_url,
             'layer3_url' : layer3_url,
@@ -115,3 +145,4 @@ class DivaInteractive(RodanTask):
 
     def my_error_information(self, exc, traceback):
 	pass
+
