@@ -13,7 +13,7 @@ def get_iiif_query (resource_path):
 		resource_path.remove('')
 		resource_path.remove('rodan')
 		resource_path.remove('data')
-		resource_path.remove('original_file.jpg')
+		del resource_path[-1]	# last element is the original uncoverted file
 		resource_path.append('diva')
 		resource_path.append('image.jp2')
 		resource_path = '%2F'.join(resource_path)
