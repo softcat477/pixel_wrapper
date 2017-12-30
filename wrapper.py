@@ -7,7 +7,7 @@ def media_file_path_to_public_url(media_file_path):
     chars_to_remove = len(MEDIA_ROOT)
     return os.path.join(MEDIA_URL, media_file_path[chars_to_remove:])
 
-class DivaInteractive(RodanTask):
+class PixelInteractive(RodanTask):
     name = 'Pixel.js'
     author = 'Zeyad Saleh, Ke Zhang & Andrew Hankinson'
     description = 'Pixel-level ground truth creation and correction'
