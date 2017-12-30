@@ -35,7 +35,7 @@
     document.addEventListener('DOMContentLoaded', function ()
     {
         var diva = new Diva('diva-wrapper', {
-            objectData: "https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/manifest.json",
+            objectData: JSON.parse("{{json}}".replace(/&quot;/g,'"')),
             plugins: [Diva.DownloadPlugin, Diva.ManipulationPlugin, Diva.PixelPlugin]
         });
     }, false)
