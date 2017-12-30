@@ -1,6 +1,6 @@
-# Diva_wrapper
+# pixel_wrapper
 
-A wrapper to run [```Diva.js```](https://github.com/DDMAL/diva.js) as a job in the workflow builder [```Rodan```](https://github.com/DDMAL/Rodan) with support for [```Pixel.js```](https://github.com/DDMAL/Pixel.js)
+A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [```Diva.js```](https://github.com/DDMAL/diva.js) as a job in the workflow builder [```Rodan```](https://github.com/DDMAL/Rodan)
 
 ## Installation
 - Clone this repo in the rodan jobs folder
