@@ -24,21 +24,28 @@ def get_iiif_query (resource_path):
     
 		return query
 
-def get_image_dimensions():
+def get_image_dimensions(resource_path):
     """
     returns the image dimensions in the following format [height, width]
     """
-    return [6993,4414]
+    resource_path = resource_path.split('/')
+    del resource_path[-1]   # last element is the original uncoverted file
+    resource_path.append('diva')
+    resource_path.append('measurement.json')
+    resource_path = '/'.join(resource_path)
 
-height, width = get_image_dimensions()
+    data = json.load(open(resource_path))
+    return [data['dims']['max_h'][-1], data['dims']['max_w'][-1]]
 
-def get_images(query_url):
-    return [ 
+def get_images(resource_path):
+    query_url = get_iiif_query (resource_path)
+    height, width = get_image_dimensions(resource_path)
+    return [
                 {
                     "@type":"oa:Annotation",
                     "motivation":"sc:painting",
                     "resource": {
-                                    "@id":query_url,
+                                    "@id": query_url,
                                     "@type":"dctypes:Image",
                                     "format":"image/jpeg",
                                     "height":height,
@@ -46,45 +53,45 @@ def get_images(query_url):
                                     "service": {
                                                     "@context": "http://iiif.io/api/image/2/context.json", "@id": query_url, "profile": "http://iiif.io/api/image/2/level2.json"
                                                 }
-                                }
-                                ,
-                        "on":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
+                                },
+                    "on":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
                 }
             ]
 
 
-def create_canvases(query_url):
+def create_canvases(resource_path):
+    height, width = get_image_dimensions(resource_path)
     data = {}
     data['@id'] = 'https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json'
     data['@type'] = 'sc:Canvas'
     data['label'] = 'Folio 001r'
     data['height'] = height
     data['width'] = width
-    data['images'] = get_images(query_url)
+    data['images'] = get_images(resource_path)
     return [data]
 
-def create_sequences(query_url):
+def create_sequences(resource_path):
     data = {}
     data['@type'] = 'sc:Sequence'
-    data['canvases'] = create_canvases(query_url)
+    data['canvases'] = create_canvases(resource_path)
     return [data]
 
-def create_metadata(query_url):
+def create_metadata(resource_path):
     return [    
                 {"label": "Date", "value": "1554-5"},
                 {"label": "Siglum", "value": "CDN-Hsmu M2149.L4"},
                 {"label": "Provenance", "value": "Salzinnes"}
            ]
 
-def create_json(query_url):
+def create_json(resource_path):
     data = {}
     data['@context'] = 'http://iiif.io/api/presentation/2/context.json'
     data['@id'] = 'https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/manifest.json'
     data['@type'] = 'sc:Manifest'
     data['label'] = 'Salzinnes, CDN-Hsmu M2149.L4'
-    data['metadata'] = create_metadata(query_url)
+    data['metadata'] = create_metadata(resource_path)
     data['description'] = 'Image'
-    data['sequences'] = create_sequences(query_url)
+    data['sequences'] = create_sequences(resource_path)
     return json.dumps(data)
 
 
@@ -173,7 +180,7 @@ class PixelInteractive(RodanTask):
 
     	# Create data to pass.
     	data = {
-    		'json': create_json(query_url),
+    		'json': create_json(inputs['Image'][0]['resource_path']),
             'layer1_url' : layer1_url,
             'layer2_url' : layer2_url,
             'layer3_url' : layer3_url,
