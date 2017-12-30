@@ -7,7 +7,7 @@ A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [
 - In rodan, go to Rodan/rodan and include the path to the wrapper folder in the Rodan Job Package registration in the the settings.py file. This should look something like the following
 ``` python
 RODAN_JOB_PACKAGES = (
-  "rodan.jobs.diva_wrapper",
+  "rodan.jobs.pixel_wrapper",
   # Paths to other jobs
 )
 ```
