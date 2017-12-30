@@ -35,7 +35,54 @@
     document.addEventListener('DOMContentLoaded', function ()
     {
         var diva = new Diva('diva-wrapper', {
-            objectData: "https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/manifest.json",
+            objectData: {
+                "@context":"http://iiif.io/api/presentation/2/context.json",
+                "@id":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/manifest.json",
+                "@type":"sc:Manifest",
+                "label":"Salzinnes, CDN-Hsmu M2149.L4",
+                "metadata":[ {
+                    "label": "Date", "value": "1554-5"
+                }
+                ,
+                {
+                    "label": "Siglum", "value": "CDN-Hsmu M2149.L4"
+                }
+                ,
+                {
+                    "label": "Provenance", "value": "Salzinnes"
+                }
+                ],
+                "description":"Image",
+                "sequences":[ {
+                    "@type":"sc:Sequence",
+                    "canvases":[ {
+                        "@id":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json",
+                        "@type":"sc:Canvas",
+                        "label":"Folio 001r",
+                        "height":6993,
+                        "width":4414,
+                        "images":[ {
+                            "@type":"oa:Annotation",
+                            "motivation":"sc:painting",
+                            "resource": {
+                                "@id":"{{query_url}}",
+                                "@type":"dctypes:Image",
+                                "format":"image/jpeg",
+                                "height":6993,
+                                "width":4414,
+                                "service": {
+                                    "@context": "http://iiif.io/api/image/2/context.json", "@id": "{{query_url}}", "profile": "http://iiif.io/api/image/2/level2.json"
+                                }
+                            }
+                            ,
+                            "on":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
+                        }
+                        ]
+                    }
+                  ]
+              }
+              ]
+            },
             plugins: [Diva.DownloadPlugin, Diva.ManipulationPlugin, Diva.PixelPlugin]
         });
     }, false)
