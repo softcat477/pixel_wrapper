@@ -3,6 +3,7 @@ from binascii import a2b_base64
 from rodan.settings import MEDIA_URL, MEDIA_ROOT
 from rodan.jobs.base import RodanTask
 from django.conf import settings
+import json
 
 def media_file_path_to_public_url(media_file_path):
     chars_to_remove = len(MEDIA_ROOT)
@@ -22,6 +23,70 @@ def get_iiif_query (resource_path):
 		query = server_url + '?IIIF=' + resource_path
     
 		return query
+
+def get_image_dimensions():
+    """
+    returns the image dimensions in the following format [height, width]
+    """
+    return [6993,4414]
+
+height, width = get_image_dimensions()
+
+def get_images(query_url):
+    return [ 
+                {
+                    "@type":"oa:Annotation",
+                    "motivation":"sc:painting",
+                    "resource": {
+                                    "@id":query_url,
+                                    "@type":"dctypes:Image",
+                                    "format":"image/jpeg",
+                                    "height":height,
+                                    "width":width,
+                                    "service": {
+                                                    "@context": "http://iiif.io/api/image/2/context.json", "@id": query_url, "profile": "http://iiif.io/api/image/2/level2.json"
+                                                }
+                                }
+                                ,
+                        "on":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
+                }
+            ]
+
+
+def create_canvases(query_url):
+    data = {}
+    data['@id'] = 'https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json'
+    data['@type'] = 'sc:Canvas'
+    data['label'] = 'Folio 001r'
+    data['height'] = height
+    data['width'] = width
+    data['images'] = get_images(query_url)
+    return [data]
+
+def create_sequences(query_url):
+    data = {}
+    data['@type'] = 'sc:Sequence'
+    data['canvases'] = create_canvases(query_url)
+    return [data]
+
+def create_metadata(query_url):
+    return [    
+                {"label": "Date", "value": "1554-5"},
+                {"label": "Siglum", "value": "CDN-Hsmu M2149.L4"},
+                {"label": "Provenance", "value": "Salzinnes"}
+           ]
+
+def create_json(query_url):
+    data = {}
+    data['@context'] = 'http://iiif.io/api/presentation/2/context.json'
+    data['@id'] = 'https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/manifest.json'
+    data['@type'] = 'sc:Manifest'
+    data['label'] = 'Salzinnes, CDN-Hsmu M2149.L4'
+    data['metadata'] = create_metadata(query_url)
+    data['description'] = 'Image'
+    data['sequences'] = create_sequences(query_url)
+    return json.dumps(data)
+
 
 class PixelInteractive(RodanTask):
     name = 'Pixel_js'
@@ -108,9 +173,7 @@ class PixelInteractive(RodanTask):
 
     	# Create data to pass.
     	data = {
-    		'width': '20',
-    		'height': '40',
-    		'query_url': query_url,
+    		'json': create_json(query_url),
             'layer1_url' : layer1_url,
             'layer2_url' : layer2_url,
             'layer3_url' : layer3_url,
