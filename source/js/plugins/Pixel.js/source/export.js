@@ -80,11 +80,7 @@ export class Export
         });
     }
 
-    /**
-     * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the layer colour
-     */
-
-    exportLayersAsHighlights ()
+    exportLayersToRodan ()
     {
         console.log("Exporting");
 
@@ -104,30 +100,42 @@ export class Export
 
                     $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
                 }
+        });
+    }
 
-            // layer.getCanvas().toBlob((blob) =>
-            // {
-            //     let text = document.createTextNode("Download " + layer.layerName + " PNG "),
-            //         link = document.getElementById(layer.layerName + "-png-download");
+    /**
+     * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the layer colour
+     */
 
-            //     if (link === null)
-            //     {
-            //         let newImg = document.createElement('img'),
-            //             url = URL.createObjectURL(blob);
+    exportLayersAsHighlights ()
+    {
+        console.log("Exporting");
 
-            //         newImg.src = url;
+        // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
+        this.layers.forEach((layer) => {
+            layer.getCanvas().toBlob((blob) =>
+            {
+                let text = document.createTextNode("Download " + layer.layerName + " PNG "),
+                    link = document.getElementById(layer.layerName + "-png-download");
 
-            //         link = document.createElement("a");
-            //         link.appendChild(text);
-            //         document.body.appendChild(link);
-            //     }
-            //     // Browsers that support HTML5 download attribute
-            //     let url = URL.createObjectURL(blob);
-            //     link.setAttribute("class", "export-download");
-            //     link.setAttribute("id", layer.layerName + "-png-download");
-            //     link.setAttribute("href", url);
-            //     link.setAttribute("download", layer.layerName);
-            // });
+                if (link === null)
+                {
+                    let newImg = document.createElement('img'),
+                        url = URL.createObjectURL(blob);
+
+                    newImg.src = url;
+
+                    link = document.createElement("a");
+                    link.appendChild(text);
+                    document.body.appendChild(link);
+                }
+                // Browsers that support HTML5 download attribute
+                let url = URL.createObjectURL(blob);
+                link.setAttribute("class", "export-download");
+                link.setAttribute("id", layer.layerName + "-png-download");
+                link.setAttribute("href", url);
+                link.setAttribute("download", layer.layerName);
+            });
         });
     }
 

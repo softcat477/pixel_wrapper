@@ -1085,6 +1085,14 @@
 	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersAsImageData();
 	        }
 	    }, {
+	        key: 'exportToRodan',
+	        value: function exportToRodan() {
+	            var pageIndex = this.core.getSettings().currentPageIndex,
+	                zoomLevel = this.core.getSettings().zoomLevel;
+
+	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersToRodan();
+	        }
+	    }, {
 	        key: 'exportAsHighlights',
 	        value: function exportAsHighlights() {
 	            var pageIndex = this.core.getSettings().currentPageIndex,
@@ -2341,14 +2349,9 @@
 	                _this2.fillMatrix(layer, _this2.matrix, layerCanvas, progressCanvas);
 	            });
 	        }
-
-	        /**
-	         * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the layer colour
-	         */
-
 	    }, {
-	        key: 'exportLayersAsHighlights',
-	        value: function exportLayersAsHighlights() {
+	        key: 'exportLayersToRodan',
+	        value: function exportLayersToRodan() {
 	            console.log("Exporting");
 
 	            var count = this.layers.length;
@@ -2366,30 +2369,41 @@
 
 	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
 	                }
+	            });
+	        }
 
-	                // layer.getCanvas().toBlob((blob) =>
-	                // {
-	                //     let text = document.createTextNode("Download " + layer.layerName + " PNG "),
-	                //         link = document.getElementById(layer.layerName + "-png-download");
+	        /**
+	         * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the layer colour
+	         */
 
-	                //     if (link === null)
-	                //     {
-	                //         let newImg = document.createElement('img'),
-	                //             url = URL.createObjectURL(blob);
+	    }, {
+	        key: 'exportLayersAsHighlights',
+	        value: function exportLayersAsHighlights() {
+	            console.log("Exporting");
 
-	                //         newImg.src = url;
+	            // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
+	            this.layers.forEach(function (layer) {
+	                layer.getCanvas().toBlob(function (blob) {
+	                    var text = document.createTextNode("Download " + layer.layerName + " PNG "),
+	                        link = document.getElementById(layer.layerName + "-png-download");
 
-	                //         link = document.createElement("a");
-	                //         link.appendChild(text);
-	                //         document.body.appendChild(link);
-	                //     }
-	                //     // Browsers that support HTML5 download attribute
-	                //     let url = URL.createObjectURL(blob);
-	                //     link.setAttribute("class", "export-download");
-	                //     link.setAttribute("id", layer.layerName + "-png-download");
-	                //     link.setAttribute("href", url);
-	                //     link.setAttribute("download", layer.layerName);
-	                // });
+	                    if (link === null) {
+	                        var newImg = document.createElement('img'),
+	                            _url = URL.createObjectURL(blob);
+
+	                        newImg.src = _url;
+
+	                        link = document.createElement("a");
+	                        link.appendChild(text);
+	                        document.body.appendChild(link);
+	                    }
+	                    // Browsers that support HTML5 download attribute
+	                    var url = URL.createObjectURL(blob);
+	                    link.setAttribute("class", "export-download");
+	                    link.setAttribute("id", layer.layerName + "-png-download");
+	                    link.setAttribute("href", url);
+	                    link.setAttribute("download", layer.layerName);
+	                });
 	            });
 	        }
 
@@ -2499,9 +2513,9 @@
 	                            var link = document.getElementById(drawingCanvas.getAttribute("value") + "-image-data-download");
 	                            if (link === null) {
 	                                var newImg = document.createElement('img'),
-	                                    _url = URL.createObjectURL(blob);
+	                                    _url2 = URL.createObjectURL(blob);
 
-	                                newImg.src = _url;
+	                                newImg.src = _url2;
 
 	                                link = document.createElement("a");
 	                                link.appendChild(text);
@@ -3150,6 +3164,8 @@
 	                csvExportText = document.createTextNode("Export as CSV"),
 	                pngExportButton = document.createElement("button"),
 	                pngExportText = document.createTextNode("Export as highlights PNG"),
+	                rodanExportButton = document.createElement("button"),
+	                rodanExportText = document.createTextNode("Submit To Rodan"),
 	                pngDataExportButton = document.createElement("button"),
 	                pngDataExportText = document.createTextNode("Export as image Data PNG");
 
@@ -3158,6 +3174,9 @@
 	            };
 	            this.exportPNG = function () {
 	                _this8.pixelInstance.exportAsHighlights();
+	            };
+	            this.exportToRodan = function () {
+	                _this8.pixelInstance.exportToRodan();
 	            };
 	            this.exportPNGData = function () {
 	                _this8.pixelInstance.exportAsImageData();
@@ -3171,12 +3190,17 @@
 	            pngExportButton.appendChild(pngExportText);
 	            pngExportButton.addEventListener("click", this.exportPNG);
 
+	            rodanExportButton.setAttribute("id", "rodan-export-button");
+	            rodanExportButton.appendChild(rodanExportText);
+	            rodanExportButton.addEventListener("click", this.exportToRodan);
+
 	            pngDataExportButton.setAttribute("id", "png-export-data-button");
 	            pngDataExportButton.appendChild(pngDataExportText);
 	            pngDataExportButton.addEventListener("click", this.exportPNGData);
 
 	            document.body.appendChild(csvExportButton);
 	            document.body.appendChild(pngExportButton);
+	            document.body.appendChild(rodanExportButton);
 	            document.body.appendChild(pngDataExportButton);
 	        }
 	    }, {

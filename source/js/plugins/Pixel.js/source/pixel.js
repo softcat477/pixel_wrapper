@@ -1126,6 +1126,14 @@ export default class PixelPlugin
         new Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersAsImageData();
     }
 
+    exportToRodan()
+    {
+        let pageIndex = this.core.getSettings().currentPageIndex,
+            zoomLevel = this.core.getSettings().zoomLevel;
+
+        new Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersToRodan();
+    }
+
     exportAsHighlights ()
     {
         let pageIndex = this.core.getSettings().currentPageIndex,
