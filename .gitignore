@@ -16,3 +16,5 @@ tags
 /node_modules/
 /coverage/
 /build/
+
+package-lock.json
