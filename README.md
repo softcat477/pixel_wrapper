@@ -15,8 +15,7 @@ RODAN_JOB_PACKAGES = (
 ```
 - In `RODAN_JOB_PACKAGES` check if `rodan.jobs.pil-rodan` is included in the job paths under the `rodan.jobs.pixel_wrapper` added in the previous step
 - If `pil-rodan` is not in the list, clone https://github.com/DDMAL/pil-rodan.git to the jobs folder, like in the first step and add its path to the list of rodan job packages like so:
-```
-python
+``` python
 RODAN_JOB_PACKAGES = (
   "rodan.jobs.pixel_wrapper",
   "rodan.jobs.pil-rodan",
