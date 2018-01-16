@@ -26,6 +26,20 @@ RODAN_JOB_PACKAGES = (
 - The wrapper should now be available to use in any workflow
 - For other information please refer to the [rodan job package documentation](https://github.com/DDMAL/Rodan/wiki/Write-a-Rodan-job-package)
 
+## Running Rodan
+- Follow the [rodan-docker guide](https://github.com/DDMAL/rodan-docker/blob/master/README.md) to have docker set up.
+- Once the above and the pixel_wrapper installation steps are complete, run ```docker-compose -f docker-compose.yml -f docker-compose.rodan-dev.yml up``` 
+
+### Using Pixel as a Rodan job
+Here are some user-level instructions on adding a pixel.js job in RODAN.
+- By following the rodan-docker guide, the rodan client should now be running on `localhost:9002`
+- Create a new workflow, or select an existing one.
+- Double-click workflow -> workflow header tab -> add job
+- Find `Diva - Pixel.js` -> Add
+- Double-click red input square to select background image from resources (you must pre-upload resources, select the resource section on the left to do so)
+- Choose png or tiff resource -> add -> input square should be green now
+- Workflow header tab -> run
+
 ## Making changes to the pixel_wrapper source code
 Sometimes changes need to be done to the source code found in ```source/js/plugins/Pixel.js```. If this is the case, make sure to run ```gulp develop:rodan``` from the ```pixel_wrapper/``` directory after making any changes. This will compile the source code and move it to the static folder, which is used to upload the code to the server running Rodan. If you make any changes to the css files, make sure to move them manually the ```pixel_wrapper/static/css``` folder 
 
