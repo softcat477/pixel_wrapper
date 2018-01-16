@@ -4,10 +4,22 @@ A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [
 
 ## Installation
 - Clone this repo in the rodan jobs folder
-- In rodan, go to Rodan/rodan and include the path to the wrapper folder in the Rodan Job Package registration in the the settings.py file. This should look something like the following
+- If it does not already exist, create a python file called `settings.py` in the rodan folder like so: `rodan_docker/rodan/code/rodan/rodan/settings.py`
+- Copy and paste the contents of `settings.py.development` into `settings.py`
+- Include the path to the wrapper folder in the Rodan Job Package registration in the settings.py file. This should look something like the following
 ``` python
 RODAN_JOB_PACKAGES = (
   "rodan.jobs.pixel_wrapper",
+  # Paths to other jobs
+)
+```
+- In `RODAN_JOB_PACKAGES` check if `rodan.jobs.pil-rodan` is included in the job paths under the `rodan.jobs.pixel_wrapper` added in the previous step
+- If `pil-rodan` is not in the list, clone https://github.com/DDMAL/pil-rodan.git to the jobs folder, like in the first step and add its path to the list of rodan job packages like so:
+```
+python
+RODAN_JOB_PACKAGES = (
+  "rodan.jobs.pixel_wrapper",
+  "rodan.jobs.pil-rodan",
   # Paths to other jobs
 )
 ```
