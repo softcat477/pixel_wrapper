@@ -113,21 +113,21 @@ class PixelInteractive(RodanTask):
         },
         {
             'name': 'PNG - Layer 1 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'PNG - Layer 2 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'PNG - Layer 3 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
