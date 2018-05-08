@@ -194,7 +194,7 @@ class PixelInteractive(RodanTask):
         list=settings['@user_input']    # List passed having the image data (base 64) from all layer
 
         for i in range(0, len(list)):
-            port = "PNG - Layer %d Output" % (i)
+            port = "rgba PNG - Layer %d Output" % (i)
             if port in outputs:
                 outfile_path = outputs[port][0]['resource_path']
                 data = list[i].split(',')[1]    # Remove header from the base 64 string
