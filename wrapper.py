@@ -113,21 +113,21 @@ class PixelInteractive(RodanTask):
         },
         {
             'name': 'PNG - Layer 1 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'PNG - Layer 2 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'PNG - Layer 3 Input',
-            'resource_types': ['image/rgb+png'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
@@ -136,22 +136,22 @@ class PixelInteractive(RodanTask):
     output_port_types = [
         # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
         {
-            'name': 'PNG - Layer 1 Output',
-            'resource_types': ['image/rgb+png'],
+            'name': 'rgba PNG - Layer 1 Output',
+            'resource_types': ['image/rgba+png'],
             'minimum': 1,
             'maximum': 1,
             'is_list': False
         },
         {
-            'name': 'PNG - Layer 2 Output',
-            'resource_types': ['image/rgb+png'],
+            'name': 'rgba PNG - Layer 2 Output',
+            'resource_types': ['image/rgba+png'],
             'minimum': 1,
             'maximum': 1,
             'is_list': False
         },
         {
-            'name': 'PNG - Layer 3 Output',
-            'resource_types': ['image/rgb+png'],
+            'name': 'rgba PNG - Layer 3 Output',
+            'resource_types': ['image/rgba+png'],
             'minimum': 1,
             'maximum': 1,
             'is_list': False
@@ -194,7 +194,7 @@ class PixelInteractive(RodanTask):
         list=settings['@user_input']    # List passed having the image data (base 64) from all layer
 
         for i in range(0, len(list)):
-            port = "PNG - Layer %d Output" % (i)
+            port = "rgba PNG - Layer %d Output" % (i)
             if port in outputs:
                 outfile_path = outputs[port][0]['resource_path']
                 data = list[i].split(',')[1]    # Remove header from the base 64 string
