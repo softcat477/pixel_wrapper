@@ -98,7 +98,7 @@ export class Export
                     console.log(urlList);
                     console.log("done");
 
-                    $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
+                    $.ajax({url: '', type: 'POST', data: JSON.stringify({   'user_input': urlList}), contentType: 'application/json'});
                 }
         });
     }
@@ -110,6 +110,14 @@ export class Export
     exportLayersAsHighlights ()
     {
         console.log("Exporting");
+
+        let backgroundLayer = new Layer(4, new Colour(242, 242, 242, 1), "RealBackground", pixelInstance, 0.5, pixelInstance.actions);
+        backgroundLayer = pixelInstance.background;
+        for (var i = 0; i < this.layers.length; i++) 
+        {
+            backgroundLayer.addPathToLayer(layers[i].getCurrentPath());
+        }
+        this.layers.push(backgroundLayer);
 
         // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
         this.layers.forEach((layer) => {
