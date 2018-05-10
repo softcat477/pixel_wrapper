@@ -1,5 +1,8 @@
 import {Colour} from './colour';
 import {Point} from './point';
+import {Layer} from './layer';
+import {Rectangle} from './rectangle';
+import {Selection} from './selection';
 
 export class Export
 {
@@ -109,13 +112,20 @@ export class Export
 
     exportLayersAsHighlights ()
     {
-        console.log("Exporting");
+        console.log("Exporting 123");
 
-        let backgroundLayer = new Layer(4, new Colour(242, 242, 242, 1), "RealBackground", pixelInstance, 0.5, pixelInstance.actions);
-        backgroundLayer = pixelInstance.background;
-        for (var i = 0; i < this.layers.length; i++) 
-        {
-            backgroundLayer.addPathToLayer(layers[i].getCurrentPath());
+        //Create new background layer which is the actual background
+        let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "RealBackground", this.pixelInstance, 0.5, this.pixelInstance.actions);
+        //Select everything on backgroundLayer using a large rectangle
+        let rect = new Rectangle(new Point(0, 0, this.pageIndex), 10000, 10000, "add");
+        backgroundLayer.addShapeToLayer(rect);
+        backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
+        //rect.drawOnPage(backgroundLayer, this.pageIndex, this.zoomLevel, this.pixelInstance.core.getSettings().renderer, backgroundLayer.getCanvas());
+        for (var i = 1; i < this.layers.length; i++) {
+            let layerSelection = new Selection();
+            layerSelection.setSelectedShape(rect, this.layers[i]);
+            backgroundLayer.removeSelectionFromLayer(layerSelection);
+            backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
         }
         this.layers.push(backgroundLayer);
 
