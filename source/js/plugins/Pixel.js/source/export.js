@@ -121,10 +121,19 @@ export class Export
         backgroundLayer.addShapeToLayer(rect);
         backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
         //rect.drawOnPage(backgroundLayer, this.pageIndex, this.zoomLevel, this.pixelInstance.core.getSettings().renderer, backgroundLayer.getCanvas());
-        for (var i = 1; i < this.layers.length; i++) {
-            let layerSelection = new Selection();
-            layerSelection.setSelectedShape(rect, this.layers[i]);
-            backgroundLayer.removeSelectionFromLayer(layerSelection);
+        for (var i = 0; i < this.layers.length; i++) {
+            this.layers[i].paths.forEach(function(path) {
+                if (path.blendMode === "add") { //ignore eraser paths
+                    path.blendMode = "subtract";
+                    backgroundLayer.addPathToLayer(path);
+                }
+            });
+            this.layers[i].shapes.forEach(function(shape) {
+                if (shape.blendMode === "add") { //ignore eraser paths
+                    shape.blendMode = "subtract";
+                    backgroundLayer.addShapeToLayer(shape);
+                }
+            });
             backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
         }
         this.layers.push(backgroundLayer);
