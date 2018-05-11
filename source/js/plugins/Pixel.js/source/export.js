@@ -3,7 +3,6 @@ import {Point} from './point';
 import {Layer} from './layer';
 import {Rectangle} from './rectangle';
 import {Path} from './path';
-import {Shape} from './shape';
 
 export class Export
 {
@@ -35,13 +34,12 @@ export class Export
         //Loop through each layer and add all their paths to the background in the opposite mode
         for (var i = 0; i < this.layers.length; i++) { 
             this.layers[i].shapes.forEach(function(shape) { //Shapes get deleted first so eraser paths can be readded after
-                //make a copy of shape
-                var newShape = new Shape(shape.point, shape.blendMode);
-                newShape.blendMode = "subtract";
+                //make a clone of shape
+                var newShape = new Rectangle(shape.origin, shape.relativeRectWidth, shape.relativeRectHeight, "subtract");
                 backgroundLayer.addShapeToLayer(newShape);
             });
             this.layers[i].paths.forEach(function(path) {
-                //make a copy of path
+                //make a clone of path
                 var newPath = new Path(path.brushSize, path.blendMode);
                 newPath.points = path.points.slice();
                 newPath.lastAbsX = path.lastAbsX;
@@ -145,7 +143,7 @@ export class Export
                     console.log(urlList);
                     console.log("done");
 
-                    $.ajax({url: '', type: 'POST', data: JSON.stringify({   'user_input': urlList}), contentType: 'application/json'});
+                    $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
                 }
         });
     }
