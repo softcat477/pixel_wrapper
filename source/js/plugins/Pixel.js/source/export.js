@@ -2,7 +2,6 @@ import {Colour} from './colour';
 import {Point} from './point';
 import {Layer} from './layer';
 import {Rectangle} from './rectangle';
-import {Selection} from './selection';
 
 export class Export
 {
@@ -20,27 +19,29 @@ export class Export
     }
 
     createBackgroundLayer() {
-        //Create new background layer which is the actual background
         let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions);
-        //Select everything on backgroundLayer using a large rectangle
-        let rect = new Rectangle(new Point(0, 0, this.pageIndex), 10000, 10000, "add");
+        let maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
+            rect = new Rectangle(new Point(0, 0, this.pageIndex), width, height, "add");
         backgroundLayer.addShapeToLayer(rect);
-        backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
+        backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+        //idea: loop through each layer and add all their paths to the background in subtract mode
         for (var i = 0; i < this.layers.length; i++) { 
-            this.layers[i].shapes.forEach(function(shape) { //shapes first
+            this.layers[i].shapes.forEach(function(shape) { //Shapes get deleted first so eraser paths can be readded after
                 shape.blendMode = "subtract";
                 backgroundLayer.addShapeToLayer(shape);
             });
             this.layers[i].paths.forEach(function(path) {
-                if (path.blendMode === "add") { //ignore eraser paths
+                if (path.blendMode === "add") { //Delete regular paths
                     path.blendMode = "subtract";
                     backgroundLayer.addPathToLayer(path);
-                } else {
+                } else { //Add back eraser paths
                     path.blendMode = "add";
                     backgroundLayer.addPathToLayer(path);
                 }
             });
-            backgroundLayer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, backgroundLayer.getCanvas());
+            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
         }
         this.layers.push(backgroundLayer);
     }
@@ -142,7 +143,7 @@ export class Export
 
     exportLayersAsHighlights ()
     {
-        console.log("Exporting 123");
+        console.log("Exporting");
 
         this.createBackgroundLayer();
 
