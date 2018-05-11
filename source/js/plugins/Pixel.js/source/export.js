@@ -1,5 +1,8 @@
 import {Colour} from './colour';
 import {Point} from './point';
+import {Layer} from './layer';
+import {Rectangle} from './rectangle';
+import {Path} from './path';
 
 export class Export
 {
@@ -16,6 +19,44 @@ export class Export
         this.uiManager = uiManager;
     }
 
+    createBackgroundLayer() {
+        //If export button has already been clicked, remove that background layer from layers
+        if (this.layers.length === 4) { 
+            this.layers.pop();
+        }
+        let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions);
+        let maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
+            rect = new Rectangle(new Point(0, 0, this.pageIndex), width, height, "add");
+        backgroundLayer.addShapeToLayer(rect);
+        backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+        //Loop through each layer and add all their paths to the background in the opposite mode
+        for (var i = 0; i < this.layers.length; i++) { 
+            this.layers[i].shapes.forEach(function(shape) { //Shapes get deleted first so eraser paths can be readded after
+                //make a clone of shape
+                var newShape = new Rectangle(shape.origin, shape.relativeRectWidth, shape.relativeRectHeight, "subtract");
+                backgroundLayer.addShapeToLayer(newShape);
+            });
+            this.layers[i].paths.forEach(function(path) {
+                //make a clone of path
+                var newPath = new Path(path.brushSize, path.blendMode);
+                newPath.points = path.points.slice();
+                newPath.lastAbsX = path.lastAbsX;
+                newPath.lastAbsY = path.lastAbsY;
+                if (path.blendMode === "add") {
+                    newPath.blendMode = "subtract";
+                    backgroundLayer.addPathToLayer(newPath);
+                } else {
+                    newPath.blendMode = "add";
+                    backgroundLayer.addPathToLayer(newPath);
+                }
+            });
+        }
+        backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+        this.layers.push(backgroundLayer);  
+    }
+
     /**
      * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
      * of the Diva page
@@ -23,6 +64,8 @@ export class Export
     exportLayersAsImageData ()
     {
         this.dataCanvases = [];
+
+        this.createBackgroundLayer();
 
         let height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).width;
@@ -84,6 +127,8 @@ export class Export
     {
         console.log("Exporting");
 
+        this.createBackgroundLayer();
+
         let count = this.layers.length;
         let urlList = [];
 
@@ -110,6 +155,8 @@ export class Export
     exportLayersAsHighlights ()
     {
         console.log("Exporting");
+
+        this.createBackgroundLayer();
 
         // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
         this.layers.forEach((layer) => {
