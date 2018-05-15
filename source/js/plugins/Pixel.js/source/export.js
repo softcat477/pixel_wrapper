@@ -26,33 +26,40 @@ export class Export
         }
         let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions);
         let maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
-            rect = new Rectangle(new Point(0, 0, this.pageIndex), width, height, "add");
+            pi = this.pageIndex,
+            scaleRatio = Math.pow(2, this.zoomLevel),
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pi, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pi, maxZoom).height,
+            rect = new Rectangle(new Point(0, 0, pi), width, height, "add");
         backgroundLayer.addShapeToLayer(rect);
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
-        //Loop through each layer and add all their paths to the background in the opposite mode
-        for (var i = 0; i < this.layers.length; i++) { 
-            this.layers[i].shapes.forEach(function(shape) { //Shapes get deleted first so eraser paths can be readded after
-                //make a clone of shape
-                var newShape = new Rectangle(shape.origin, shape.relativeRectWidth, shape.relativeRectHeight, "subtract");
-                backgroundLayer.addShapeToLayer(newShape);
-            });
-            this.layers[i].paths.forEach(function(path) {
-                //make a clone of path
-                var newPath = new Path(path.brushSize, path.blendMode);
-                newPath.points = path.points.slice();
-                newPath.lastAbsX = path.lastAbsX;
-                newPath.lastAbsY = path.lastAbsY;
-                if (path.blendMode === "add") {
-                    newPath.blendMode = "subtract";
-                    backgroundLayer.addPathToLayer(newPath);
-                } else {
-                    newPath.blendMode = "add";
-                    backgroundLayer.addPathToLayer(newPath);
+        //loop through each layer and add their opposite pixel data
+        this.layers.forEach(function(layer) { 
+
+            let layerCanvas = document.createElement('canvas');
+            layerCanvas.setAttribute("class", "export-page-canvas");
+            layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
+            layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
+            layerCanvas.width = width;
+            layerCanvas.height = height;
+            layer.drawLayerInPageCoords(maxZoom, layerCanvas, pi);
+            let pixelCtx = layerCanvas.getContext('2d');
+
+            for (var row = 0; row < layer.canvas.height; row++) {
+                for (var col = 0; col < layer.canvas.width; col++) {
+                    let data = pixelCtx.getImageData(col, row, 1, 1).data,
+                        colour = new Colour(data[0], data[1], data[2], data[3]);
+                    if (colour.alpha !== 0) {
+                        // let backgroundColour = new Colour(data[0], data[1], data[2], 0); //transparent
+                        // backgroundLayer.getCtx().fillStyle = backgroundColour.toHTMLColour();
+                        // backgroundLayer.getCtx().fillRect(col, row, 1, 1);
+                        let test = new Rectangle(new Point(col, row, pi), 1, 1, "subtract");
+                        backgroundLayer.addShapeToLayer(test);
+                    }
                 }
-            });
-        }
+                console.log("row: " + row);
+            }
+        });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
         this.layers.push(backgroundLayer);  
     }
