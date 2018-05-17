@@ -69,15 +69,15 @@
 
 	var _export = __webpack_require__(9);
 
-	var _uiManager = __webpack_require__(11);
+	var _uiManager = __webpack_require__(10);
 
-	var _tools = __webpack_require__(13);
+	var _tools = __webpack_require__(12);
 
-	var _import = __webpack_require__(14);
+	var _import = __webpack_require__(13);
 
-	var _selection = __webpack_require__(15);
+	var _selection = __webpack_require__(14);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(11);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2264,8 +2264,6 @@
 
 	var _rectangle = __webpack_require__(3);
 
-	var _circle = __webpack_require__(10);
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var Export = exports.Export = function () {
@@ -2283,6 +2281,12 @@
 	        this.uiManager = uiManager;
 	    }
 
+	    /**
+	     *  Generates a background layer by iterating over all the pixel data for each layer and 
+	     *  subtracting it from the background layer if the data is non-transparent (alpha != 0)
+	     */
+
+
 	    _createClass(Export, [{
 	        key: 'createBackgroundLayer',
 	        value: function createBackgroundLayer() {
@@ -2292,7 +2296,6 @@
 	            }
 	            var backgroundLayer = new _layer.Layer(4, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                renderer = this.pixelInstance.core.getSettings().renderer,
 	                pageIndex = this.pageIndex,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
 	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
@@ -2302,8 +2305,8 @@
 	            backgroundLayer.addShapeToLayer(rect);
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
-	            //loop through each layer 
 	            this.layers.forEach(function (layer) {
+
 	                //create canvas to retrieve pixel data through context
 	                var layerCanvas = document.createElement('canvas');
 	                layerCanvas.setAttribute("class", "export-page-canvas");
@@ -2319,24 +2322,14 @@
 	                    for (var col = 0; col < width; col++) {
 	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
 	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-
 	                        if (colour.alpha !== 0) {
-	                            // let paddedCoords = new Point().getPaddedCoordinatesFromAbsolute(pageIndex, renderer, col, row);
-	                            // if (paddedCoords.y < 0)
-	                            //     renderer.goto(pageIndex, row, col);
-	                            // else if (paddedCoords.y > layerCanvas.height)
-	                            //     renderer.goto(pageIndex, row + layerCanvas.height, col);
-	                            // else if (paddedCoords.x < 0)
-	                            //     renderer.goto(pageIndex, row, col);
-	                            // else if (paddedCoords.x > layerCanvas.width)
-	                            //     renderer.goto(pageIndex, row, col + layerCanvas.width);
-
-	                            //console.log("at row: " + row + ", and col " + col + ", alpha was " + colour.alpha);
 	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
 	                            backgroundLayer.addShapeToLayer(currentPixel);
 	                        }
 	                    }
-	                    console.log("Row: " + row);
+	                    if (row === height - 1) {
+	                        console.log("Done layer " + layer.layerId);
+	                    }
 	                }
 	                backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
 	            });
@@ -2764,164 +2757,13 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.Circle = undefined;
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	var _shape = __webpack_require__(4);
-
-	var _point = __webpack_require__(2);
-
-	var _colour = __webpack_require__(5);
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-	var Circle = exports.Circle = function (_Shape) {
-	    _inherits(Circle, _Shape);
-
-	    function Circle(point, relativeRadius, blendMode) {
-	        _classCallCheck(this, Circle);
-
-	        var _this = _possibleConstructorReturn(this, (Circle.__proto__ || Object.getPrototypeOf(Circle)).call(this, point, blendMode));
-
-	        _this.relativeRadius = relativeRadius;
-	        return _this;
-	    }
-
-	    /**
-	     * draws a circle of a certain layer in a canvas using viewport coordinates (padded coordinates)
-	     * @param layer
-	     * @param pageIndex
-	     * @param zoomLevel
-	     * @param renderer
-	     * @param canvas
-	     */
-
-
-	    _createClass(Circle, [{
-	        key: 'drawInViewport',
-	        value: function drawInViewport(layer, pageIndex, zoomLevel, renderer, canvas) {
-	            var scaleRatio = Math.pow(2, zoomLevel),
-	                ctx = canvas.getContext('2d');
-
-	            if (pageIndex === this.origin.pageIndex) {
-	                // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
-	                // (to make it look like it is on top of a page in Diva)
-	                var absoluteCenterWithPadding = this.origin.getCoordsInViewport(zoomLevel, pageIndex, renderer);
-
-	                //Draw the circle
-	                ctx.fillStyle = layer.colour.toHTMLColour();
-	                ctx.beginPath();
-	                ctx.arc(absoluteCenterWithPadding.x, absoluteCenterWithPadding.y, this.relativeRadius * scaleRatio, 0, 2 * Math.PI);
-	                ctx.fill();
-	            }
-	        }
-
-	        /**
-	         * draws a circle of a certain layer in a canvas using absolute page coordinates
-	         * @param layer
-	         * @param pageIndex
-	         * @param zoomLevel
-	         * @param renderer
-	         * @param canvas
-	         */
-
-	    }, {
-	        key: 'drawOnPage',
-	        value: function drawOnPage(layer, pageIndex, zoomLevel, renderer, canvas) {
-	            var scaleRatio = Math.pow(2, zoomLevel),
-	                ctx = canvas.getContext('2d');
-
-	            if (pageIndex === this.origin.pageIndex) {
-	                // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
-	                // (to make it look like it is on top of a page in Diva)
-	                var absoluteCenter = this.origin.getCoordsInPage(zoomLevel);
-
-	                //Draw the circle
-	                ctx.fillStyle = layer.colour.toHTMLColour();
-	                ctx.beginPath();
-	                ctx.arc(absoluteCenter.x, absoluteCenter.y, this.relativeRadius * scaleRatio, 0, 2 * Math.PI);
-	                ctx.fill();
-	            }
-	        }
-
-	        /**
-	         * Gets all the pixels spanned by a circle. Draws the image data that the circle covers (from the imageCanvas) in the drawingCanvas
-	         * @param layer
-	         * @param pageIndex
-	         * @param zoomLevel
-	         * @param renderer
-	         * @param drawingCanvas
-	         * @param imageCanvas
-	         */
-
-	    }, {
-	        key: 'getPixels',
-	        value: function getPixels(layer, pageIndex, zoomLevel, renderer, drawingCanvas, imageCanvas) {
-	            var circleTop = new _point.Point(this.origin.relativeOriginX, this.origin.relativeOriginY - this.relativeRadius, 0),
-	                circleBottom = new _point.Point(this.origin.relativeOriginX, this.origin.relativeOriginY + this.relativeRadius, 0),
-	                circleLeft = new _point.Point(this.origin.relativeOriginX - this.relativeRadius, this.origin.relativeOriginY, 0),
-	                circleRight = new _point.Point(this.origin.relativeOriginX + this.relativeRadius, this.origin.relativeOriginY, 0);
-
-	            var drawingCtx = drawingCanvas.getContext('2d'),
-	                imageCtx = imageCanvas.getContext('2d');
-
-	            var scaleRatio = Math.pow(2, zoomLevel);
-
-	            for (var y = circleTop.getCoordsInViewport(zoomLevel, pageIndex, renderer).y; y <= circleBottom.getCoordsInViewport(zoomLevel, pageIndex, renderer).y; y++) {
-	                for (var x = circleLeft.getCoordsInViewport(zoomLevel, pageIndex, renderer).x; x <= circleRight.getCoordsInViewport(zoomLevel, pageIndex, renderer).x; x++) {
-	                    var point1highlightOffset = this.origin.getCoordsInViewport(zoomLevel, pageIndex, renderer);
-
-	                    var shiftedX = x - point1highlightOffset.x,
-	                        shiftedY = y - point1highlightOffset.y;
-
-	                    // If it satisfies the circle equation x^2 + y^2 <= r^2
-	                    if (shiftedX * shiftedX + shiftedY * shiftedY <= this.relativeRadius * scaleRatio * this.relativeRadius * scaleRatio) {
-	                        // Get absolute from padded
-	                        var absoluteCoords = new _point.Point().getAbsoluteCoordinatesFromPadded(pageIndex, renderer, x, y);
-
-	                        // In bounds
-	                        if (absoluteCoords.y >= 0 && absoluteCoords.x >= 0 && absoluteCoords.y <= drawingCanvas.height && absoluteCoords.x <= drawingCanvas.width) {
-	                            if (this.blendMode === "add") {
-	                                var paddedCoords = new _point.Point().getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteCoords.x, absoluteCoords.y),
-	                                    data = imageCtx.getImageData(paddedCoords.x, paddedCoords.y, 1, 1).data,
-	                                    colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-
-	                                drawingCtx.fillStyle = colour.toHTMLColour();
-	                                drawingCtx.fillRect(absoluteCoords.x, absoluteCoords.y, 1, 1);
-	                            } else if (this.blendMode === "subtract") {
-	                                drawingCtx.clearRect(absoluteCoords.x, absoluteCoords.y, 1, 1);
-	                            }
-	                        }
-	                    }
-	                }
-	            }
-	        }
-	    }]);
-
-	    return Circle;
-	}(_shape.Shape);
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
 	exports.UIManager = undefined;
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 	var _point = __webpack_require__(2);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(11);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3706,7 +3548,7 @@
 	}();
 
 /***/ }),
-/* 12 */
+/* 11 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -3740,7 +3582,7 @@
 	}(PixelException);
 
 /***/ }),
-/* 13 */
+/* 12 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -3845,7 +3687,7 @@
 	}();
 
 /***/ }),
-/* 14 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3956,7 +3798,7 @@
 	}();
 
 /***/ }),
-/* 15 */
+/* 14 */
 /***/ (function(module, exports) {
 
 	"use strict";
