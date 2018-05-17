@@ -1076,6 +1076,14 @@
 	        // on the highlighted regions
 
 	    }, {
+	        key: 'createBackgroundLayer',
+	        value: function createBackgroundLayer() {
+	            var pageIndex = this.core.getSettings().currentPageIndex,
+	                zoomLevel = this.core.getSettings().zoomLevel;
+
+	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).createBackgroundLayer();
+	        }
+	    }, {
 	        key: 'exportAsImageData',
 	        value: function exportAsImageData() {
 	            //FIXME: Force Diva to highest zoom level to be able to get the pixel data
@@ -2290,10 +2298,12 @@
 	    _createClass(Export, [{
 	        key: 'createBackgroundLayer',
 	        value: function createBackgroundLayer() {
-	            //If export button has already been clicked, remove that background layer from layers
+	            console.log("Generating...");
+	            //If generate background button has already been clicked, remove that background layer from layers
 	            if (this.layers.length === 4) {
 	                this.layers.pop();
 	            }
+
 	            var backgroundLayer = new _layer.Layer(4, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
 	                pageIndex = this.pageIndex,
@@ -2306,7 +2316,6 @@
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
 	            this.layers.forEach(function (layer) {
-
 	                //create canvas to retrieve pixel data through context
 	                var layerCanvas = document.createElement('canvas');
 	                layerCanvas.setAttribute("class", "export-page-canvas");
@@ -2328,13 +2337,14 @@
 	                        }
 	                    }
 	                    if (row === height - 1) {
-	                        console.log("Done layer " + layer.layerId);
+	                        console.log(layer.layerId * 33 + "% done");
 	                    }
 	                }
 	                backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
 	            });
 	            this.layers.push(backgroundLayer);
-	            console.log("Done exporting");
+	            document.getElementById("create-background-button").innerText = "Generated!";
+	            console.log("Generated");
 	        }
 
 	        /**
@@ -2348,8 +2358,6 @@
 	            var _this = this;
 
 	            this.dataCanvases = [];
-
-	            this.createBackgroundLayer();
 
 	            var height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).width;
@@ -2415,8 +2423,6 @@
 	        value: function exportLayersToRodan() {
 	            console.log("Exporting");
 
-	            this.createBackgroundLayer();
-
 	            var count = this.layers.length;
 	            var urlList = [];
 
@@ -2443,8 +2449,6 @@
 	        key: 'exportLayersAsHighlights',
 	        value: function exportLayersAsHighlights() {
 	            console.log("Exporting");
-
-	            this.createBackgroundLayer();
 
 	            // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
 	            this.layers.forEach(function (layer) {
@@ -3225,7 +3229,9 @@
 	        value: function createExportButtons() {
 	            var _this8 = this;
 
-	            var csvExportButton = document.createElement("button"),
+	            var createBackgroundButton = document.createElement("button"),
+	                createBackgroundText = document.createTextNode("Generate Background Layer"),
+	                csvExportButton = document.createElement("button"),
 	                csvExportText = document.createTextNode("Export as CSV"),
 	                pngExportButton = document.createElement("button"),
 	                pngExportText = document.createTextNode("Export as highlights PNG"),
@@ -3234,6 +3240,9 @@
 	                pngDataExportButton = document.createElement("button"),
 	                pngDataExportText = document.createTextNode("Export as image Data PNG");
 
+	            this.createBackgroundLayer = function () {
+	                _this8.pixelInstance.createBackgroundLayer();
+	            };
 	            this.exportCSV = function () {
 	                _this8.pixelInstance.exportAsCSV();
 	            };
@@ -3246,6 +3255,10 @@
 	            this.exportPNGData = function () {
 	                _this8.pixelInstance.exportAsImageData();
 	            };
+
+	            createBackgroundButton.setAttribute("id", "create-background-button");
+	            createBackgroundButton.appendChild(createBackgroundText);
+	            createBackgroundButton.addEventListener("click", this.createBackgroundLayer);
 
 	            csvExportButton.setAttribute("id", "csv-export-button");
 	            csvExportButton.appendChild(csvExportText);
@@ -3263,6 +3276,7 @@
 	            pngDataExportButton.appendChild(pngDataExportText);
 	            pngDataExportButton.addEventListener("click", this.exportPNGData);
 
+	            document.body.appendChild(createBackgroundButton);
 	            document.body.appendChild(csvExportButton);
 	            document.body.appendChild(pngExportButton);
 	            document.body.appendChild(rodanExportButton);

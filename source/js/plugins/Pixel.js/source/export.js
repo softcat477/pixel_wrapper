@@ -24,10 +24,12 @@ export class Export
      */
     createBackgroundLayer() 
     {
-        //If export button has already been clicked, remove that background layer from layers
+        console.log("Generating...");
+        //If generate background button has already been clicked, remove that background layer from layers
         if (this.layers.length === 4) { 
             this.layers.pop();
         }
+
         let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, 
             this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
@@ -41,7 +43,6 @@ export class Export
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
         this.layers.forEach(function(layer) {
-
             //create canvas to retrieve pixel data through context
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
@@ -63,13 +64,14 @@ export class Export
                     }
                 }
                 if (row === height-1) {
-                    console.log("Done layer " + layer.layerId);
+                    console.log(layer.layerId*33 + "% done");
                 }
             }
             backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
         });
         this.layers.push(backgroundLayer);  
-        console.log("Done exporting");
+        document.getElementById("create-background-button").innerText = "Generated!";
+        console.log("Generated");
     }
 
     /**
@@ -79,8 +81,6 @@ export class Export
     exportLayersAsImageData ()
     {
         this.dataCanvases = [];
-
-        this.createBackgroundLayer();
 
         let height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).width;
@@ -142,8 +142,6 @@ export class Export
     {
         console.log("Exporting");
 
-        this.createBackgroundLayer();
-
         let count = this.layers.length;
         let urlList = [];
 
@@ -170,8 +168,6 @@ export class Export
     exportLayersAsHighlights ()
     {
         console.log("Exporting");
-
-        this.createBackgroundLayer();
 
         // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
         this.layers.forEach((layer) => {

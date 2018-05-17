@@ -1117,6 +1117,14 @@ export default class PixelPlugin
 
     // Will fill a canvas with the highlighted data and scan every pixel of that and fill another canvas with diva data
     // on the highlighted regions
+    createBackgroundLayer ()
+    {
+        let pageIndex = this.core.getSettings().currentPageIndex,
+            zoomLevel = this.core.getSettings().zoomLevel;
+
+        new Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).createBackgroundLayer();
+    }
+
     exportAsImageData ()
     {
         //FIXME: Force Diva to highest zoom level to be able to get the pixel data
