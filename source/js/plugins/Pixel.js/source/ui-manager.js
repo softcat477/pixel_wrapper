@@ -538,7 +538,7 @@ export class UIManager
     createExportElements (exportInstance)
     {
         let exportDiv = document.createElement('div'),
-            text = document.createTextNode("Exporting"),
+            text = document.createTextNode("Generating"),
             progressText = document.createTextNode("0%"),
             progressBarOuterDiv = document.createElement('div'),
             progressBarInnerDiv = document.createElement('div'),

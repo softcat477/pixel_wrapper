@@ -16,15 +16,16 @@ export class Export
         this.zoomLevel = zoomLevel;
         this.matrix = null;
         this.uiManager = uiManager;
+        this.layersCount = 3;
     }
 
     /**
      *  Generates a background layer by iterating over all the pixel data for each layer and 
-     *  subtracting it from the background layer if the data is non-transparent (alpha != 0)
+     *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
+     *  replicates what the exportLayersAsImageData function does but for the background.
      */
     createBackgroundLayer() 
     {
-        console.log("Generating...");
         //If generate background button has already been clicked, remove that background layer from layers
         if (this.layers.length === 4) { 
             this.layers.pop();
@@ -42,8 +43,10 @@ export class Export
         backgroundLayer.addShapeToLayer(rect);
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
-        this.layers.forEach(function(layer) {
-            //create canvas to retrieve pixel data through context
+        let progressCanvas = this.uiManager.createExportElements(this).progressCanvas;
+
+        this.layers.forEach((layer) => {
+            //create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
             layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
@@ -51,27 +54,66 @@ export class Export
             layerCanvas.width = width;
             layerCanvas.height = height;
             layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex); 
-            let pixelCtx = layerCanvas.getContext('2d');
 
-            //loop through every pixel and subtract from background if it's opaque
-            for (var row = 0; row < height; row++) {
-                for (var col = 0; col < width; col++) {
+            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+        });
+    }
+
+    subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
+        var chunkSize = width,
+            chunkNum = 0,
+            row = 0,
+            col = 0,
+            pixelCtx = layerCanvas.getContext('2d');
+        let doChunk = () => {
+            var cnt = chunkSize;
+            chunkNum++;
+            while (cnt--) {
+                if (row >= height)
+                    break;
+                if (col < width) {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data,
                         colour = new Colour(data[0], data[1], data[2], data[3]);
-                    if (colour.alpha !== 0) { 
+                    if (colour.alpha !== 0) {
                         let currentPixel = new Rectangle(new Point(col, row, pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
+                    col++;
                 }
-                if (row === height-1) {
-                    console.log(layer.layerId*33 + "% done");
+                else {
+                    row++;
+                    col = 0;
                 }
             }
-            backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-        });
-        this.layers.push(backgroundLayer);  
-        document.getElementById("create-background-button").innerText = "Generated!";
-        console.log("Generated");
+            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
+                setTimeout(doChunk, 1);
+            }
+        };  
+        doChunk();
+    }
+
+    progress(row, chunkSize, chunkNum, height, backgroundLayer) {
+        if (row === height) {
+            this.layersCount -= 1;
+        }
+        if (row < height) {
+            let percentage = (chunkNum * chunkSize) * 100 / (height * chunkSize),
+                roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
+            this.pixelInstance.uiManager.updateProgress(roundedPercentage);
+            return {
+                needsRecall: true
+            };
+        } else {
+            if (this.layersCount === 0) { //done generating background layer
+                backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
+                this.layers.push(backgroundLayer);  
+                document.getElementById("create-background-button").innerText = "Background Generated!";
+                this.uiManager.destroyExportElements();
+            }
+        }
+        return {
+            needsRecall: false
+        };
     }
 
     /**
