@@ -2,7 +2,7 @@ import {Colour} from './colour';
 import {Point} from './point';
 import {Layer} from './layer';
 import {Rectangle} from './rectangle';
-import {Path} from './path';
+import {Circle} from './circle';
 
 export class Export
 {
@@ -19,49 +19,57 @@ export class Export
         this.uiManager = uiManager;
     }
 
-    createBackgroundLayer() {
+    createBackgroundLayer() 
+    {
         //If export button has already been clicked, remove that background layer from layers
         if (this.layers.length === 4) { 
             this.layers.pop();
         }
-        let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions);
-        let maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-            pi = this.pageIndex,
-            scaleRatio = Math.pow(2, this.zoomLevel),
-            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pi, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pi, maxZoom).height,
-            rect = new Rectangle(new Point(0, 0, pi), width, height, "add");
+        let backgroundLayer = new Layer(4, new Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, 
+            this.pixelInstance.actions),
+            maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
+            renderer = this.pixelInstance.core.getSettings().renderer,
+            pageIndex = this.pageIndex,
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+
+        //highlight whole image for background layer
+        let rect = new Rectangle(new Point(0, 0, pageIndex), width, height, "add");
         backgroundLayer.addShapeToLayer(rect);
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
-        //loop through each layer and add their opposite pixel data
-        this.layers.forEach(function(layer) { 
 
+        //loop through each layer 
+        this.layers.forEach(function(layer) 
+        { 
+            //create canvas to retrieve pixel data through context
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
             layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
             layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
             layerCanvas.width = width;
             layerCanvas.height = height;
-            layer.drawLayerInPageCoords(maxZoom, layerCanvas, pi);
+            layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex); 
             let pixelCtx = layerCanvas.getContext('2d');
 
-            for (var row = 0; row < layer.canvas.height; row++) {
-                for (var col = 0; col < layer.canvas.width; col++) {
+            //loop through every pixel and subtract from background if it's opaque
+            for (var row = 0; row < height; row++) 
+            {
+                for (var col = 0; col < width; col++) 
+                {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data,
                         colour = new Colour(data[0], data[1], data[2], data[3]);
-                    if (colour.alpha !== 0) {
-                        // let backgroundColour = new Colour(data[0], data[1], data[2], 0); //transparent
-                        // backgroundLayer.getCtx().fillStyle = backgroundColour.toHTMLColour();
-                        // backgroundLayer.getCtx().fillRect(col, row, 1, 1);
-                        let test = new Rectangle(new Point(col, row, pi), 1, 1, "subtract");
-                        backgroundLayer.addShapeToLayer(test);
+                    if (colour.alpha !== 0) 
+                    {
+                        let currentPixel = new Rectangle(new Point(col, row, pageIndex), 1, 1, "subtract");
+                        backgroundLayer.addShapeToLayer(currentPixel);
                     }
                 }
-                console.log("row: " + row);
+                console.log("Row: " + row);
             }
+            backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
         });
-        backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
         this.layers.push(backgroundLayer);  
+        console.log("Done exporting");
     }
 
     /**
