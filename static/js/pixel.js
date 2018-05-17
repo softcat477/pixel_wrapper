@@ -2264,10 +2264,6 @@
 
 	var _rectangle = __webpack_require__(3);
 
-	var _path = __webpack_require__(7);
-
-	var _shape = __webpack_require__(4);
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var Export = exports.Export = function () {
@@ -2285,6 +2281,12 @@
 	        this.uiManager = uiManager;
 	    }
 
+	    /**
+	     *  Generates a background layer by iterating over all the pixel data for each layer and 
+	     *  subtracting it from the background layer if the data is non-transparent (alpha != 0)
+	     */
+
+
 	    _createClass(Export, [{
 	        key: 'createBackgroundLayer',
 	        value: function createBackgroundLayer() {
@@ -2292,39 +2294,47 @@
 	            if (this.layers.length === 4) {
 	                this.layers.pop();
 	            }
-	            var backgroundLayer = new _layer.Layer(4, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions);
-	            var maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
-	                rect = new _rectangle.Rectangle(new _point.Point(0, 0, this.pageIndex), width, height, "add");
+	            var backgroundLayer = new _layer.Layer(4, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
+	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
+	                pageIndex = this.pageIndex,
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+
+	            //highlight whole image for background layer
+	            var rect = new _rectangle.Rectangle(new _point.Point(0, 0, pageIndex), width, height, "add");
 	            backgroundLayer.addShapeToLayer(rect);
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
-	            //Loop through each layer and add all their paths to the background in the opposite mode
-	            for (var i = 0; i < this.layers.length; i++) {
-	                this.layers[i].shapes.forEach(function (shape) {
-	                    //Shapes get deleted first so eraser paths can be readded after
-	                    //make a copy of shape
-	                    var newShape = new _shape.Shape(shape.point, shape.blendMode);
-	                    newShape.blendMode = "subtract";
-	                    backgroundLayer.addShapeToLayer(newShape);
-	                });
-	                this.layers[i].paths.forEach(function (path) {
-	                    //make a copy of path
-	                    var newPath = new _path.Path(path.brushSize, path.blendMode);
-	                    newPath.points = path.points.slice();
-	                    newPath.lastAbsX = path.lastAbsX;
-	                    newPath.lastAbsY = path.lastAbsY;
-	                    if (path.blendMode === "add") {
-	                        newPath.blendMode = "subtract";
-	                        backgroundLayer.addPathToLayer(newPath);
-	                    } else {
-	                        newPath.blendMode = "add";
-	                        backgroundLayer.addPathToLayer(newPath);
+
+	            this.layers.forEach(function (layer) {
+
+	                //create canvas to retrieve pixel data through context
+	                var layerCanvas = document.createElement('canvas');
+	                layerCanvas.setAttribute("class", "export-page-canvas");
+	                layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
+	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
+	                layerCanvas.width = width;
+	                layerCanvas.height = height;
+	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
+	                var pixelCtx = layerCanvas.getContext('2d');
+
+	                //loop through every pixel and subtract from background if it's opaque
+	                for (var row = 0; row < height; row++) {
+	                    for (var col = 0; col < width; col++) {
+	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
+	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
+	                        if (colour.alpha !== 0) {
+	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
+	                            backgroundLayer.addShapeToLayer(currentPixel);
+	                        }
 	                    }
-	                });
-	            }
-	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+	                    if (row === height - 1) {
+	                        console.log("Done layer " + layer.layerId);
+	                    }
+	                }
+	                backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
+	            });
 	            this.layers.push(backgroundLayer);
+	            console.log("Done exporting");
 	        }
 
 	        /**
