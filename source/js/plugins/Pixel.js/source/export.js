@@ -28,7 +28,7 @@ export class Export
     createBackgroundLayer () 
     {
         // If generate background button has already been clicked, remove that background layer from layers
-        if (document.getElementById("create-background-button").innerText === "Background Generated!") { 
+        if (document.getElementById("create-background-button").value === "clicked") { 
             this.layers.pop();
             this.layersCount = this.layers.length;
         }
@@ -118,6 +118,7 @@ export class Export
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.push(backgroundLayer);  
                 document.getElementById("create-background-button").innerText = "Background Generated!";
+                document.getElementById("create-background-button").value = "clicked";
                 this.uiManager.destroyExportElements();
             }
         }
@@ -129,9 +130,18 @@ export class Export
     /**
      * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
      * of the Diva page
+     * We need to remove the background layer since otherwise the generation isn't done properly because of the
+     * differing zoom mechanics for each layer. 
      */
     exportLayersAsImageData ()
     {
+        // Ignore background layer if generated, readd at end
+        var bgLayer;
+        if (document.getElementById("create-background-button").value === "clicked") { 
+            bgLayer = this.layers.pop();
+            this.exportLayersCount--;
+        }
+
         this.dataCanvases = [];
 
         let height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
@@ -161,14 +171,27 @@ export class Export
             this.dataCanvases.push(pngCanvas);
             this.replaceLayerWithImageData(this.pixelInstance.core.getSettings().renderer._canvas, pngCanvas, this.pageIndex, layerCanvas, progressCanvas);
         });
+
+        if (document.getElementById("create-background-button").value === "clicked") { 
+            this.layers.push(bgLayer);
+        }
     }
 
     /**
      * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
      * of the Diva page
+     * We need to remove the background layer since otherwise the generation isn't done properly because of the
+     * differing zoom mechanics for each layer.
      */
     exportLayersAsCSV ()
     {
+        // Ignore background layer if generated, readd at end
+        var bgLayer;
+        if (document.getElementById("create-background-button").value === "clicked") { 
+            bgLayer = this.layers.pop();
+            this.exportLayersCount--;
+        }
+
         let core = this.pixelInstance.core,
             height = core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
             width = core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).width;
@@ -188,6 +211,10 @@ export class Export
             layer.drawLayerInPageCoords(this.zoomLevel, layerCanvas, this.pageIndex);
             this.fillMatrix(layer, this.matrix, layerCanvas, progressCanvas);
         });
+
+        if (document.getElementById("create-background-button").value === "clicked") { 
+            this.layers.push(bgLayer);
+        }
     }
 
     exportLayersToRodan ()
