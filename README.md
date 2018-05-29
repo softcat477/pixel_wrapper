@@ -23,6 +23,7 @@ RODAN_JOB_PACKAGES = (
 )
 ```
 - In ```source/js/plugins/Pixel.js``` run ```./pixel.sh``` in terminal to install all dependencies and compile the project.
+- In ```source/js/plugins``` run ```python add_wrapper.py``` in terminal to inject the wrapper activation code to ```pixel.js```.
 - The wrapper should now be available to use in any workflow
 - For other information please refer to the [rodan job package documentation](https://github.com/DDMAL/Rodan/wiki/Write-a-Rodan-job-package)
 
