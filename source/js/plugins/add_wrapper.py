@@ -9,11 +9,12 @@ activate_flag = True
 deactivate_flag = True
 
 import_code = "import {PixelWrapper} from '../../pixel-wrapper';\n"
-activate_code = "\t\t// Activate wrapper\n\t\tthis.pixelWrapper = new PixelWrapper(this);\n\t\tthis.pixelWrapper.activate();\n\n"
+activate_code = """\t\t// Activate wrapper\n\t\tthis.pixelWrapper = new PixelWrapper(this);
+\t\tthis.pixelWrapper.activate();\n\n"""
 deactivate_code = "\t\t// Deactivate wrapper\n\t\tthis.pixelWrapper.deactivate();\n\n"
 
 if import_code in lines:
-    print("The wrapper code has already been added!\nExiting")
+    print("The wrapper code has already been added!")
     raise SystemExit
 
 f = open('./pixel.js/source/pixel.js', 'w')

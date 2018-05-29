@@ -19,6 +19,7 @@ export class PixelWrapper
 
     activate ()
     {
+        this.createLayers();
         this.createButtons();
         this.rodanImagesToCanvas();
     }
@@ -26,6 +27,16 @@ export class PixelWrapper
     deactivate ()
     {
         this.destroyButtons();
+    }
+
+    createLayers ()
+    {
+        let layer2 = new Layer(2, new Colour(255, 51, 102, 1), "Layer 2", this.pixelInstance, 0.5),
+            layer3 = new Layer(3, new Colour(255, 255, 10, 1), "Layer 3", this.pixelInstance, 0.5);
+
+        this.layers.push(layer2);
+        this.layers.push(layer3);
+        this.pixelInstance.layerIdCounter = this.layers.length+1;
     }
 
     createButtons () 
