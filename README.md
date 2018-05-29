@@ -22,6 +22,8 @@ RODAN_JOB_PACKAGES = (
   # Paths to other jobs
 )
 ```
+- Run ```git submodule init``` and ```git submodule update``` in terminal (from within this repository) to activate the Pixel.js submodule.
+- In ```source/js/plugins``` run ```python activate_wrapper.py``` in terminal to activate the wrapper within `Pixel.js`.
 - In ```source/js/plugins/Pixel.js``` run ```./pixel.sh``` in terminal to install all dependencies and compile the project.
 - The wrapper should now be available to use in any workflow
 - For other information please refer to the [rodan job package documentation](https://github.com/DDMAL/Rodan/wiki/Write-a-Rodan-job-package)

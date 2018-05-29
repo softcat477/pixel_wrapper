@@ -50,34 +50,39 @@
 	    value: true
 	});
 
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * This plugin will be used to transform Diva into a layering tool which will be used to provide
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * the ground truth data for the machine learning algorithm
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * that classifies and isolates the different components of old manuscripts and scores.
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * {string} pluginName - Added to the class prototype. Defines the name for the plugin.
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      **/
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
+	/**
+	 * This plugin will be used to transform Diva into a layering tool which will be used to provide
+	 * the ground truth data for the machine learning algorithm
+	 * that classifies and isolates the different components of old manuscripts and scores.
+	 *
+	 * {string} pluginName - Added to the class prototype. Defines the name for the plugin.
+	 *
+	 **/
 
-	var _point = __webpack_require__(2);
+	var _pixelWrapper = __webpack_require__(2);
+
+	var _point = __webpack_require__(5);
 
 	var _rectangle = __webpack_require__(3);
 
-	var _layer = __webpack_require__(6);
+	var _layer = __webpack_require__(7);
 
-	var _colour = __webpack_require__(5);
+	var _colour = __webpack_require__(6);
 
-	var _export = __webpack_require__(9);
+	var _export = __webpack_require__(10);
 
-	var _uiManager = __webpack_require__(10);
+	var _uiManager = __webpack_require__(11);
 
-	var _tools = __webpack_require__(12);
+	var _tools = __webpack_require__(13);
 
-	var _import = __webpack_require__(13);
+	var _import = __webpack_require__(14);
 
-	var _selection = __webpack_require__(14);
+	var _selection = __webpack_require__(15);
 
-	var _exceptions = __webpack_require__(11);
+	var _tutorial = __webpack_require__(16);
+
+	var _exceptions = __webpack_require__(12);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -101,11 +106,14 @@
 	        this.actions = [];
 	        this.undoneActions = [];
 	        this.shiftDown = false;
+	        this.initialShiftPress = true;
 	        this.lastRelCoordX = null;
 	        this.lastRelCoordY = null;
 	        this.uiManager = null;
 	        this.tools = null;
 	        this.selection = null;
+	        this.horizontalMove = false;
+	        this.layerIdCounter = 2;
 	    }
 
 	    /**
@@ -122,16 +130,12 @@
 	    }, {
 	        key: 'activatePlugin',
 	        value: function activatePlugin() {
-	            //this.tutorial();
-
 	            if (this.layers === null) {
 	                // Start by creating layers
-	                var background = new _layer.Layer(0, new _colour.Colour(242, 242, 242, 1), "Background", this, 1, this.actions),
-	                    layer1 = new _layer.Layer(1, new _colour.Colour(51, 102, 255, 1), "Layer 1", this, 0.5, this.actions),
-	                    layer2 = new _layer.Layer(2, new _colour.Colour(255, 51, 102, 1), "Layer 2", this, 0.5, this.actions),
-	                    layer3 = new _layer.Layer(3, new _colour.Colour(255, 255, 10, 1), "Layer 3", this, 0.5, this.actions);
+	                var background = new _layer.Layer(0, new _colour.Colour(242, 242, 242, 1), "Background", this, 1),
+	                    layer1 = new _layer.Layer(1, new _colour.Colour(51, 102, 255, 1), "Layer 1", this, 0.5);
 
-	                this.layers = [layer1, layer2, layer3];
+	                this.layers = [layer1];
 	                this.background = background;
 	                this.background.canvas = this.core.getSettings().renderer._canvas; // Link background canvas to the actual diva canvas
 	            }
@@ -139,6 +143,10 @@
 	            if (this.uiManager === null) this.uiManager = new _uiManager.UIManager(this);
 
 	            if (this.tools === null) this.tools = new _tools.Tools(this);
+
+	            // Activate wrapper
+	            this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
+	            this.pixelWrapper.activate();
 
 	            this.uiManager.createPluginElements(this.layers);
 	            this.scrollEventHandle = this.subscribeToScrollEvent();
@@ -148,18 +156,19 @@
 	            this.subscribeToWindowResizeEvent();
 	            this.subscribeToMouseEvents();
 	            this.subscribeToKeyboardEvents();
-	            this.redrawAllLayers(); // Repaint the tiles to retrigger VisibleTilesDidLoad
 
-	            //FIXME (PotassiumK): are the two lines below still supposed to be here?
-	            if (this.tools.getCurrentTool() === this.tools.type.brush || this.tools.getCurrentTool() === this.tools.type.eraser) document.getElementById("diva-1-outer").style.cursor = "none"; // hacky way to set the cursor to the circle on startup (when brush is selected)
-
-	            new _import.Import(this, this.layers, this.core.getSettings().currentPageIndex, this.core.getSettings().zoomLevel, this.uiManager).rodanImagesToCanvas();
-
+	            // Setting Tool to change the cursor type
+	            this.tools.setCurrentTool(this.tools.getCurrentTool());
 	            this.activated = true;
+
+	            new _tutorial.Tutorial();
 	        }
 	    }, {
 	        key: 'deactivatePlugin',
 	        value: function deactivatePlugin() {
+	            // Deactivate wrapper
+	            this.pixelWrapper.deactivate();
+
 	            global.Diva.Events.unsubscribe(this.scrollEventHandle);
 	            global.Diva.Events.unsubscribe(this.zoomEventHandle);
 
@@ -168,7 +177,6 @@
 	            this.redrawAllLayers(); // Repaint the tiles to make the highlights disappear off the page
 
 	            this.uiManager.destroyPluginElements(this.layers, this.background);
-
 	            this.enableDragScrollable();
 	            this.activated = false;
 	        }
@@ -220,6 +228,8 @@
 	         * ===============================================
 	         **/
 
+	        // Repositions all layers on top of editing page when the browser window is resized
+
 	    }, {
 	        key: 'subscribeToWindowResizeEvent',
 	        value: function subscribeToWindowResizeEvent() {
@@ -231,6 +241,9 @@
 	                });
 	            });
 	        }
+
+	        // Resizes the elements of the layers on viewport zoom
+
 	    }, {
 	        key: 'subscribeToZoomLevelWillChangeEvent',
 	        value: function subscribeToZoomLevelWillChangeEvent() {
@@ -243,6 +256,9 @@
 	            });
 	            return handle;
 	        }
+
+	        // Repositions all layers on top of editing page on viewport scroll
+
 	    }, {
 	        key: 'subscribeToScrollEvent',
 	        value: function subscribeToScrollEvent() {
@@ -253,7 +269,6 @@
 	                    layer.placeLayerCanvasOnTopOfEditingPage();
 	                });
 	            });
-
 	            return handle;
 	        }
 	    }, {
@@ -357,6 +372,11 @@
 	        key: 'drop',
 	        value: function drop(event, departureLayerIndex, destinationLayerIndex) {
 	            event.preventDefault();
+	            this.reorderLayers(departureLayerIndex, destinationLayerIndex);
+	        }
+	    }, {
+	        key: 'reorderLayers',
+	        value: function reorderLayers(departureLayerIndex, destinationLayerIndex) {
 	            var tempLayerStorage = this.layers[departureLayerIndex];
 
 	            if (departureLayerIndex > destinationLayerIndex) {
@@ -371,13 +391,14 @@
 	                this.layers[destinationLayerIndex] = tempLayerStorage;
 	            }
 
-	            this.selectedLayerIndex = destinationLayerIndex;
+	            // Destroy all UI elements then recreate them (to show that the layers have been reordered through the UI)
+	            this.changeCurrentlySelectedLayerIndex(destinationLayerIndex);
 	            this.uiManager.destroyPluginElements(this.layers, this.background);
 	            this.uiManager.createPluginElements(this.layers);
 	            this.uiManager.destroyPixelCanvases(this.layers); // TODO: Optimization: Instead of destroying all of the canvases only destroy and reorder the ones of interest
 	            this.uiManager.placeLayerCanvasesInDiva(this.layers);
 	            this.uiManager.placeLayerCanvasesInDiva(this.background);
-	            this.highlightLayerSelector(this.layers[this.selectedLayerIndex].layerId);
+	            this.uiManager.highlightLayerSelectorById(this.layers[this.selectedLayerIndex].layerId);
 	            this.redrawAllLayers();
 	        }
 
@@ -387,77 +408,107 @@
 	         * -----------------------------------------------
 	         **/
 
+	        // Actions on key release
+
 	    }, {
 	        key: 'onKeyUp',
 	        value: function onKeyUp(e) {
 	            var KEY_1 = 49;
-	            var KEY_9 = 56;
-	            var H_KEY = 72;
-	            var M_KEY = 77;
-	            var SHIFT_KEY = 16;
+	            var KEY_9 = 57;
 
 	            var lastLayer = this.selectedLayerIndex,
-	                numberOfLayers = this.layers.length,
 	                key = e.keyCode ? e.keyCode : e.which;
 
-	            // Selecting a Layer use keyboard shortcut
-	            if (key >= KEY_1 && key < KEY_1 + numberOfLayers && key <= KEY_9) {
-	                this.highlightLayerSelector(key - KEY_1 + 1);
+	            // Selecting a Layer using keyboard shortcutkeys 1 to 9
+	            if (key >= KEY_1 && key <= KEY_9) {
+	                try {
+	                    this.uiManager.highlightLayerSelectorById(key - KEY_1 + 1);
+	                } catch (e) {
+	                    if (e instanceof _exceptions.CannotSelectLayerException) {
+	                        alert(e.message);
+	                    }
+	                }
 
 	                if (lastLayer !== this.selectedLayerIndex && this.mousePressed) this.layerChangedMidDraw = true;
 	            }
 
-	            if (key === SHIFT_KEY) this.shiftDown = false;
-
-	            if (key === M_KEY) {
-	                var layerActivationDiv = document.getElementById("layer-" + (this.selectedLayerIndex + 1) + "-activation");
-	                if (layerActivationDiv.classList.contains("layer-activated")) {
-	                    this.layerActivate(this.layers[this.selectedLayerIndex], layerActivationDiv);
-	                } else if (layerActivationDiv.classList.contains("layer-deactivated")) {
-	                    this.layerDeactivate(this.layers[this.selectedLayerIndex], layerActivationDiv);
-	                }
-	            }
-
-	            if (key === H_KEY) {
-	                var _layerActivationDiv = document.getElementById("layer-" + (this.selectedLayerIndex + 1) + "-activation");
-	                this.toggleLayerActivation(this.layers[this.selectedLayerIndex], _layerActivationDiv);
+	            switch (e.key.toLowerCase()) {
+	                case "shift":
+	                    this.shiftDown = false;
+	                    break;
+	                case "h":
+	                    this.layers[this.selectedLayerIndex].toggleLayerActivation();
 	            }
 	        }
 	    }, {
 	        key: 'onKeyDown',
 	        value: function onKeyDown(e) {
-	            var layerActivationDiv = document.getElementById("layer-" + (this.selectedLayerIndex + 1) + "-activation");
-
-	            var Z_KEY_CODE = 90,
-	                evtobj = window.event ? event : e;
-
-	            if (evtobj.keyCode === Z_KEY_CODE && (evtobj.ctrlKey || evtobj.metaKey) && evtobj.shiftKey) // Cmd + Shift + Z
-	                this.redoAction();else if (evtobj.keyCode === Z_KEY_CODE && (evtobj.ctrlKey || evtobj.metaKey)) // Cmd + Z
-	                this.undoAction();
-
-	            switch (e.key) {
+	            switch (e.key.toLowerCase()) {
+	                case "[":
+	                    console.log(this.selectedLayerIndex);
+	                    if (this.selectedLayerIndex !== 0) this.reorderLayers(this.selectedLayerIndex, this.selectedLayerIndex - 1);else {
+	                        //TODO: throw layer is already lowest layer exception
+	                    }
+	                    break;
+	                case "]":
+	                    if (this.selectedLayerIndex !== this.layers.length - 1) this.reorderLayers(this.selectedLayerIndex, this.selectedLayerIndex + 1);else {
+	                        //TODO: throw layer is already highest layer exception
+	                    }
+	                case "escape":
+	                    if (this.selection !== null) {
+	                        if (this.selection.imageData === null) {
+	                            this.selection.clearSelection(this.core.getSettings().maxZoomLevel);
+	                        }
+	                    }
+	                    break;
+	                case "backspace":
+	                    //FIXME: is it also "backspace" for windows?
+	                    try {
+	                        if (e.ctrlKey || e.metaKey) // Cmd + Delete
+	                            {
+	                                this.deleteLayer();
+	                            }
+	                    } catch (e) {
+	                        if (e instanceof _exceptions.CannotDeleteLayerException) {
+	                            alert(e.message);
+	                        }
+	                    }
+	                    break;
+	                case "n":
+	                    if (e.ctrlKey || e.metaKey) {
+	                        this.createLayer(); // Cmd + N
+	                    }
+	                    break;
+	                case "z":
+	                    if ((e.ctrlKey || e.metaKey) && e.shiftKey) // Cmd + Shift + Z
+	                        this.redoAction();else if (e.ctrlKey || e.metaKey) // Cmd + Z
+	                        this.undoAction();
+	                    break;
 	                case "c":
 	                    if (e.ctrlKey || e.metaKey) // Cmd + c
-	                        {
-	                            this.selection.copyShape(this.core.getSettings().maxZoomLevel);
-	                        }
+	                        this.selection.copyShape(this.core.getSettings().maxZoomLevel);
 	                    break;
 	                case "x":
 	                    if (e.ctrlKey || e.metaKey) // Cmd + x
-	                        {
-	                            this.selection.cutShape(this.core.getSettings().maxZoomLevel);
-	                        }
+	                        this.selection.cutShape(this.core.getSettings().maxZoomLevel);
 	                    break;
 	                case "v":
 	                    if (e.ctrlKey || e.metaKey) // Cmd + v
 	                        {
-	                            this.selection.pasteShapeToLayer(this.layers[this.selectedLayerIndex]);
-	                            this.selection = null;
-	                            this.redrawLayer(this.layers[this.selectedLayerIndex]);
+	                            if (this.selection !== null) {
+	                                if (this.selection.imageData !== null) {
+	                                    this.selection.pasteShapeToLayer(this.layers[this.selectedLayerIndex]);
+	                                    this.selection = null;
+	                                    this.redrawLayer(this.layers[this.selectedLayerIndex]);
+	                                }
+	                            }
 	                        }
 	                    break;
-	                case "Shift":
+	                case "shift":
 	                    this.shiftDown = true;
+	                    break;
+	                case "f":
+	                    this.core.publicInstance.toggleFullscreenMode();
 	                    break;
 	                case "b":
 	                    this.tools.setCurrentTool(this.tools.type.brush);
@@ -469,24 +520,17 @@
 	                    this.tools.setCurrentTool(this.tools.type.grab);
 	                    break;
 	                case "e":
-	                    this.tools.setCurrentTool(this.tools.type.eraser);
+	                    this.tools.setCurrentTool(this.tools.type.erase);
 	                    break;
 	                case "s":
 	                    this.tools.setCurrentTool(this.tools.type.select);
 	                    break;
+	                //FIXME: Current implementation continuously toggles layer activation on key hold. Should happen once on first key press
 	                case "m":
-	                    console.log("enter M press");
-	                    if (layerActivationDiv.classList.contains("layer-activated")) {
-	                        this.layerDeactivate(this.layers[this.selectedLayerIndex], layerActivationDiv);
-	                    } else if (layerActivationDiv.classList.contains("layer-deactivated")) {
-	                        this.layerActivate(this.layers[this.selectedLayerIndex], layerActivationDiv);
-	                    }
-	                    //this.toggleLayerActivation(this.layers[this.selectedLayerIndex], layerActivationDiv);
+	                    this.layers[this.selectedLayerIndex].toggleLayerActivation();
 	                    break;
 	                case "h":
-	                    if (layerActivationDiv.classList.contains("layer-activated")) {
-	                        this.toggleLayerActivation(this.layers[this.selectedLayerIndex], layerActivationDiv);
-	                    }
+	                    if (this.layers[this.selectedLayerIndex].isActivated()) this.layers[this.selectedLayerIndex].toggleLayerActivation();
 	                    break;
 	            }
 	        }
@@ -528,6 +572,26 @@
 	                y: evt.clientY - rect.top
 	            };
 	        }
+
+	        /*
+	            +===========+=======================+=======================+
+	            |   tool    |       Left Click      |       Right Click     |
+	            +===========+=======================+=======================+
+	            |   Brush   |     Freeform paint    |         Resize        |
+	            +–––––––––––+–––––––––––––––––––––––+–––––––––––––––––––––––+
+	            | Rectangle |     Rectangle draw    |    Rectangle Erase    |
+	            +–––––––––––+–––––––––––––––––––––––+–––––––––––––––––––––––+
+	            |   Grab    |       Drag scroll     |       Drag scroll     |
+	            +–––––––––––+–––––––––––––––––––––––+–––––––––––––––––––––––+
+	            |   Erase   |     Freeform erase    |         Resize        |
+	            +–––––––––––+–––––––––––––––––––––––+–––––––––––––––––––––––+
+	            |   Select  |    Rectangle Select   |    Rectangle Select   |
+	            +===========+=======================+=======================+
+	                    Tools' behaviour on left and right mouse clicks
+	         */
+
+	        // Initializes tool actions
+
 	    }, {
 	        key: 'onMouseDown',
 	        value: function onMouseDown(evt) {
@@ -535,62 +599,31 @@
 	                mousePos = this.getMousePos(mouseClickDiv, evt);
 
 	            // Clear Selection
-	            if (this.selection !== null) {
-	                this.selection.clearSelection(this.core.getSettings().maxZoomLevel);
-	            }
+	            if (this.selection !== null) this.selection.clearSelection(this.core.getSettings().maxZoomLevel);
 
-	            if (evt.which === 1) {
-	                this.rightMousePressed = false;
-	                switch (this.tools.getCurrentTool()) {
-	                    case this.tools.type.brush:
-	                        this.mousePressed = true;
-	                        this.initializeNewPathInCurrentLayer(mousePos);
-	                        break;
-	                    case this.tools.type.rectangle:
-	                        this.mousePressed = true;
-	                        this.initializeRectanglePreview(mousePos);
-	                        break;
-	                    case this.tools.type.grab:
-	                        this.mousePressed = true;
-	                        mouseClickDiv.style.cursor = "-webkit-grabbing";
-	                        break;
-	                    case this.tools.type.eraser:
-	                        this.mousePressed = true;
-	                        this.initializeNewPathInCurrentLayer(mousePos);
-	                        break;
-	                    case this.tools.type.select:
-	                        this.mousePressed = true;
-	                        this.selection = new _selection.Selection();
-	                        this.initializeRectanglePreview(mousePos);
-	                        break;
-	                    default:
-	                        this.mousePressed = true;
-	                }
-	            } else if (evt.which === 3) {
-	                this.rightMousePressed = true;
-	                switch (this.tools.getCurrentTool()) {
-	                    case this.tools.type.brush:
-	                        this.mousePressed = true;
-	                        this.initializeBrushChange(mousePos);
-	                        break;
-	                    case this.tools.type.rectangle:
-	                        this.mousePressed = true;
-	                        this.initializeRectanglePreview(mousePos);
-	                        break;
-	                    case this.tools.type.eraser:
-	                        this.mousePressed = true;
-	                        this.initializeBrushChange(mousePos);
-	                        break;
-	                    case this.tools.type.select:
-	                        this.mousePressed = true;
-	                        this.selection = new _selection.Selection();
-	                        this.initializeRectanglePreview(mousePos);
-	                        break;
-	                    default:
-	                        this.mousePressed = true;
-	                }
-	            }
+	            if (evt.which === 1) this.rightMousePressed = false;
+	            if (evt.which === 3) this.rightMousePressed = true;
 
+	            this.mousePressed = true;
+	            switch (this.tools.getCurrentTool()) {
+	                case this.tools.type.brush:
+	                    if (this.rightMousePressed) this.initializeBrushSizeChange(mousePos);else this.initializeNewPathInCurrentLayer(mousePos);
+	                    break;
+	                case this.tools.type.rectangle:
+	                    this.initializeRectanglePreview(mousePos);
+	                    break;
+	                case this.tools.type.grab:
+	                    mouseClickDiv.style.cursor = "-webkit-grabbing"; // Change grab cursor to grabbing
+	                    break;
+	                case this.tools.type.erase:
+	                    if (this.rightMousePressed) this.initializeBrushSizeChange(mousePos);else this.initializeNewPathInCurrentLayer(mousePos);
+	                    break;
+	                case this.tools.type.select:
+	                    this.selection = new _selection.Selection();
+	                    this.initializeRectanglePreview(mousePos);
+	                    break;
+	                default:
+	            }
 	            // FIXME: At deactivation mouse is down so it clears the actions to redo
 	            this.undoneActions = [];
 	        }
@@ -608,7 +641,7 @@
 	                case this.tools.type.rectangle:
 	                    this.rectanglePreview(mousePos);
 	                    break;
-	                case this.tools.type.eraser:
+	                case this.tools.type.erase:
 	                    if (this.rightMousePressed) this.changeBrushSize(mousePos);else this.addPointToCurrentPath(mousePos);
 	                    this.uiManager.moveBrushCursor(mousePos);
 	                    break;
@@ -620,104 +653,23 @@
 	        }
 	    }, {
 	        key: 'onMouseUp',
-	        value: function onMouseUp() // can take an event as an argument
-	        {
+	        value: function onMouseUp() {
 	            var mouseClickDiv = document.getElementById("diva-1-outer");
+	            this.mousePressed = false;
+	            this.rightMousePressed = false;
+	            this.horizontalMove = false;
+	            this.initialShiftPress = true;
 
 	            switch (this.tools.getCurrentTool()) {
-	                case this.tools.type.brush:
-	                    this.mousePressed = false;
-	                    this.rightMousePressed = false;
-	                    break;
-	                // TODO: Add action: resized rectangle.
-	                // This is useful if a user wants to revert a rectangle resize (when implemented)
 	                case this.tools.type.rectangle:
-	                    this.mousePressed = false;
-	                    this.rightMousePressed = false;
-	                    break;
-	                case this.tools.type.eraser:
-	                    this.mousePressed = false;
-	                    this.rightMousePressed = false;
+	                    // TODO: Add action: resized rectangle.
+	                    // This is useful if a user wants to undo a rectangle resize (when implemented)
 	                    break;
 	                case this.tools.type.grab:
-	                    this.mousePressed = false;
 	                    mouseClickDiv.style.cursor = "-webkit-grab";
 	                    break;
-	                case this.tools.type.select:
-	                    this.mousePressed = false;
-	                    this.rightMousePressed = false;
-	                    break;
 	                default:
-	                    this.mousePressed = false;
-	                    this.rightMousePressed = false;
 	            }
-	        }
-
-	        /**
-	         * -----------------------------------------------
-	         *                 Tools Selection
-	         * -----------------------------------------------
-	         **/
-
-	    }, {
-	        key: 'displayColourOptions',
-	        value: function displayColourOptions() {
-	            // TODO: Implement function
-	            console.log("colour clicked here");
-	        }
-	    }, {
-	        key: 'displayLayerOptions',
-	        value: function displayLayerOptions(layer, layerOptionsDiv) {
-	            if (layerOptionsDiv.classList.contains("unchecked-layer-settings")) //It is unchecked, check it
-	                {
-	                    layerOptionsDiv.classList.remove("unchecked-layer-settings");
-	                    layerOptionsDiv.classList.add("checked-layer-settings");
-	                    this.uiManager.createOpacitySlider(layer, layerOptionsDiv.parentElement.parentElement, layerOptionsDiv.parentElement);
-	                } else {
-	                layerOptionsDiv.classList.remove("checked-layer-settings");
-	                layerOptionsDiv.classList.add("unchecked-layer-settings");
-	                this.uiManager.destroyOpacitySlider(layer);
-	            }
-	        }
-	    }, {
-	        key: 'layerActivate',
-	        value: function layerActivate(layer, layerActivationDiv) {
-	            layerActivationDiv.classList.remove("layer-deactivated");
-	            layerActivationDiv.classList.add("layer-activated");
-	            layer.getCanvas().style.opacity = layer.getLayerOpacity();
-
-	            if (layer.layerId === this.background.layerId) // Background
-	                {
-	                    layer.activated = true;
-	                } else {
-	                layer.activateLayer();
-	                this.redrawLayer(layer);
-	            }
-	        }
-	    }, {
-	        key: 'layerDeactivate',
-	        value: function layerDeactivate(layer, layerActivationDiv) {
-	            layerActivationDiv.classList.remove("layer-activated");
-	            layerActivationDiv.classList.add("layer-deactivated");
-
-	            if (layer.layerId === this.background.layerId) // Background
-	                {
-	                    layer.getCanvas().style.opacity = 0;
-	                    layer.activated = false;
-	                } else {
-	                layer.deactivateLayer();
-	            }
-	        }
-	    }, {
-	        key: 'toggleLayerActivation',
-	        value: function toggleLayerActivation(layer, layerActivationDiv) {
-	            if (layerActivationDiv.classList.contains("layer-deactivated")) // Activating
-	                {
-	                    this.layerActivate(layer, layerActivationDiv);
-	                } else // Deactivating
-	                {
-	                    this.layerDeactivate(layer, layerActivationDiv);
-	                }
 	        }
 
 	        /**
@@ -729,35 +681,71 @@
 	    }, {
 	        key: 'deleteLayer',
 	        value: function deleteLayer() {
-	            var newLayersArray = [],
-	                oldLayersArray = this.layers,
-	                layer = this.layers[this.selectedLayerIndex],
+	            var layer = this.layers[this.selectedLayerIndex],
 	                currentLayersLength = this.layers.length;
 
 	            if (currentLayersLength <= 1) throw new _exceptions.CannotDeleteLayerException("Must at least have one layer other than the background");
 
-	            for (var i = 0; i < currentLayersLength; i++) {
-	                if (layer !== this.layers[i]) {
-	                    newLayersArray.push(this.layers[i]);
-	                }
-	            }
+	            this.uiManager.destroyPluginElements(this.layers, this.background);
+	            this.layers.splice(this.selectedLayerIndex, 1);
 
-	            this.layers = newLayersArray;
 	            //reset to the first element on each delete
 	            this.selectedLayerIndex = 0;
 
 	            //refreshing the layers view to reflect changes
-	            this.uiManager.destroyPluginElements(this.layers, this.background);
 	            this.uiManager.createPluginElements(this.layers);
-	            this.uiManager.destroyPixelCanvases(oldLayersArray); // TODO: Optimization: Instead of destroying all of the canvases only destroy the one of interest
-	            this.uiManager.placeLayerCanvasesInDiva(this.layers);
-	            this.uiManager.placeLayerCanvasesInDiva(this.background);
-	            this.highlightLayerSelector(this.layers[this.selectedLayerIndex].layerId); //TODO: select some default layer (actually not sure what this does tbh)
 	            this.redrawAllLayers();
+
+	            this.layerIdCounter--;
 	        }
 	    }, {
 	        key: 'createLayer',
-	        value: function createLayer() {}
+	        value: function createLayer() {
+	            var colour = void 0;
+
+	            switch (this.layerIdCounter) {
+	                case 1:
+	                    colour = new _colour.Colour(51, 102, 255, 1);
+	                    break;
+	                case 2:
+	                    colour = new _colour.Colour(255, 51, 102, 1);
+	                    break;
+	                case 3:
+	                    colour = new _colour.Colour(255, 255, 10, 1);
+	                    break;
+	                case 4:
+	                    colour = new _colour.Colour(2, 136, 0, 1);
+	                    break;
+	                case 5:
+	                    colour = new _colour.Colour(96, 0, 186, 1);
+	                    break;
+	                case 6:
+	                    colour = new _colour.Colour(239, 143, 0, 1);
+	                    break;
+	                case 7:
+	                    colour = new _colour.Colour(71, 239, 200, 1);
+	                    break;
+	                case 8:
+	                    colour = new _colour.Colour(247, 96, 229, 1);
+	                    break;
+	                case 9:
+	                    colour = new _colour.Colour(114, 61, 0, 1);
+	                    break;
+	                default:
+	                    colour = new _colour.Colour(parseInt(255 * Math.random()), parseInt(255 * Math.random()), parseInt(255 * Math.random()), 1);
+	            }
+
+	            var layer = new _layer.Layer(this.layerIdCounter, colour, "Layer " + this.layerIdCounter, this, 0.5);
+
+	            this.layerIdCounter++;
+	            this.layers.push(layer);
+
+	            this.changeCurrentlySelectedLayerIndex(this.layers.length - 1);
+	            this.uiManager.destroyPluginElements(this.layers, this.background);
+	            this.uiManager.createPluginElements(this.layers);
+
+	            this.redrawAllLayers();
+	        }
 
 	        /**
 	         * -----------------------------------------------
@@ -773,16 +761,20 @@
 
 	                if (!actionToRedo.layer.isActivated()) return;
 
-	                if (actionToRedo.object.type === "path") {
-	                    actionToRedo.layer.addPathToLayer(actionToRedo.object);
-	                    this.undoneActions.splice(this.undoneActions.length - 1, 1);
-	                } else if (actionToRedo.object.type === "shape") {
-	                    actionToRedo.layer.addShapeToLayer(actionToRedo.object);
-	                    this.undoneActions.splice(this.undoneActions.length - 1, 1);
-	                } else if (actionToRedo.object.type === "selection") {
-	                    actionToRedo.layer.addToPastedRegions(actionToRedo.object);
-	                    this.undoneActions.splice(this.undoneActions.length - 1, 1);
+	                switch (actionToRedo.object.type) {
+	                    case "path":
+	                        actionToRedo.layer.addPathToLayer(actionToRedo.object);
+	                        break;
+	                    case "shape":
+	                        actionToRedo.layer.addShapeToLayer(actionToRedo.object);
+	                        break;
+	                    case "selection":
+	                        actionToRedo.layer.addToPastedRegions(actionToRedo.object);
+	                        break;
+	                    default:
 	                }
+
+	                this.undoneActions.splice(this.undoneActions.length - 1, 1); // Remove last element from undoneActions
 	                this.redrawLayer(actionToRedo.layer);
 	            }
 	        }
@@ -811,12 +803,17 @@
 	        value: function removeAction(action) {
 	            if (action === null) return;
 
-	            if (action.object.type === "path") {
-	                action.layer.removePathFromLayer(action.object);
-	            } else if (action.object.type === "shape") {
-	                action.layer.removeShapeFromLayer(action.object);
-	            } else if (action.object.type === "selection") {
-	                action.layer.removeSelectionFromLayer(action.object);
+	            switch (action.object.type) {
+	                case "path":
+	                    action.layer.removePathFromLayer(action.object);
+	                    break;
+	                case "shape":
+	                    action.layer.removeShapeFromLayer(action.object);
+	                    break;
+	                case "selection":
+	                    action.layer.removeSelectionFromLayer(action.object);
+	                    break;
+	                default:
 	            }
 
 	            // Get index of the action and remove it from the array
@@ -829,28 +826,13 @@
 	         * ===============================================
 	         **/
 
-	        // Specify the class of the selected div. CSS takes care of the rest
+	        /*
+	            1. Checks if drawing is valid
+	            2. Initializes a Path object in the selected layer and chooses its blend mode depending on the current tool
+	            3. Adds a point to the newly initialized path
+	            4. Specifies the zoomLevel at which the point will be drawn
+	         */
 
-	    }, {
-	        key: 'highlightLayerSelector',
-	        value: function highlightLayerSelector(layerType) {
-	            var _this6 = this;
-
-	            layerType = parseInt(layerType);
-
-	            this.layers.forEach(function (layer) {
-	                // layerType is a string i
-	                if (layer.layerId === layerType) {
-	                    var div = document.getElementById("layer-" + layer.layerId + "-selector");
-
-	                    if (!div.hasAttribute("selected-layer")) div.classList.add("selected-layer");
-	                    _this6.selectedLayerIndex = _this6.layers.indexOf(layer);
-	                } else {
-	                    var _div = document.getElementById("layer-" + layer.layerId + "-selector");
-	                    if (_div.classList.contains("selected-layer")) _div.classList.remove("selected-layer");
-	                }
-	            });
-	        }
 	    }, {
 	        key: 'initializeNewPathInCurrentLayer',
 	        value: function initializeNewPathInCurrentLayer(mousePos) {
@@ -879,7 +861,7 @@
 	                if (this.tools.getCurrentTool() === this.tools.type.brush) {
 	                    selectedLayer.createNewPath(brushSize, "add");
 	                    selectedLayer.addToCurrentPath(point, "add");
-	                } else if (this.tools.getCurrentTool() === this.tools.type.eraser) {
+	                } else if (this.tools.getCurrentTool() === this.tools.type.erase) {
 	                    selectedLayer.createNewPath(brushSize, "subtract");
 	                    selectedLayer.addToCurrentPath(point, "subtract");
 	                }
@@ -891,6 +873,14 @@
 	                this.mousePressed = false;
 	            }
 	        }
+
+	        /*
+	             1. Checks if drawing is valid
+	             2. Specifies the coordinates of the point to be drawn depending on shift press
+	             3. Adds a point to the current path being edited in the current layer
+	             4. Connects the new point to the previous point in the current path and draws it
+	         */
+
 	    }, {
 	        key: 'addPointToCurrentPath',
 	        value: function addPointToCurrentPath(mousePos) {
@@ -902,15 +892,10 @@
 	            if (!this.mousePressed) return;
 
 	            var point = void 0,
-	                horizontalMove = false,
 	                pageIndex = this.core.getSettings().currentPageIndex,
 	                zoomLevel = this.core.getSettings().zoomLevel,
 	                renderer = this.core.getSettings().renderer,
 	                relativeCoords = new _point.Point().getRelativeCoordinatesFromPadded(pageIndex, renderer, mousePos.x, mousePos.y, zoomLevel);
-
-	            // FIXME: direction of line drawing should be calculated only after the first shift button press
-	            // Right now it is being calculated at every point
-	            if (Math.abs(relativeCoords.x - this.lastRelCoordX) >= Math.abs(relativeCoords.y - this.lastRelCoordY)) horizontalMove = true;
 
 	            if (!this.uiManager.isInPageBounds(relativeCoords.x, relativeCoords.y)) return;
 
@@ -918,18 +903,32 @@
 	                var _pageIndex = this.core.getSettings().currentPageIndex,
 	                    _zoomLevel = this.core.getSettings().maxZoomLevel;
 
+	                // Draw straight lines
 	                if (this.mousePressed && this.shiftDown) {
-	                    if (!horizontalMove) point = new _point.Point(this.lastRelCoordX, relativeCoords.y, _pageIndex);else point = new _point.Point(relativeCoords.x, this.lastRelCoordY, _pageIndex);
+	                    // If this is the first time shift is pressed, calculate the direction of the line
+	                    if (this.initialShiftPress) {
+	                        // this.lastRelCoordX/Y hold saved path coordinates that help drawing a straight line
+	                        // They are not updated when the straight line is being drawn
+	                        if (Math.abs(relativeCoords.x - this.lastRelCoordX) >= Math.abs(relativeCoords.y - this.lastRelCoordY)) this.horizontalMove = true;
+
+	                        this.initialShiftPress = false;
+	                    }
+
+	                    if (!this.horizontalMove) point = new _point.Point(this.lastRelCoordX, relativeCoords.y, _pageIndex);else point = new _point.Point(relativeCoords.x, this.lastRelCoordY, _pageIndex);
 	                } else {
+	                    this.horizontalMove = false;
+	                    this.initialShiftPress = true;
+	                    this.lastRelCoordX = relativeCoords.x;
+	                    this.lastRelCoordY = relativeCoords.y;
 	                    point = new _point.Point(relativeCoords.x, relativeCoords.y, _pageIndex);
 	                }
 
-	                // Draw path with new point
+	                // Add new point to the current path
 	                switch (this.tools.getCurrentTool()) {
 	                    case this.tools.type.brush:
 	                        this.layers[this.selectedLayerIndex].addToCurrentPath(point, "add");
 	                        break;
-	                    case this.tools.type.eraser:
+	                    case this.tools.type.erase:
 	                        this.layers[this.selectedLayerIndex].addToCurrentPath(point, "subtract");
 	                        break;
 	                    default:
@@ -946,6 +945,12 @@
 	            this.initializeNewPathInCurrentLayer(mousePos);
 	            this.layerChangedMidDraw = false;
 	        }
+
+	        /*
+	            1. Checks if drawing is valid
+	            2. Creates a Rectangle object in the selected layer and chooses its mode depending on the current tool
+	         */
+
 	    }, {
 	        key: 'initializeRectanglePreview',
 	        value: function initializeRectanglePreview(mousePos) {
@@ -961,19 +966,29 @@
 
 	            if (this.uiManager.isInPageBounds(relativeCoords.x, relativeCoords.y)) {
 	                var selectedLayer = this.layers[this.selectedLayerIndex];
-	                if (this.tools.getCurrentTool() === this.tools.type.select) {
-	                    selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "select", this.tools.getCurrentTool()));
-	                    this.selection.setSelectedShape(selectedLayer.getCurrentShape(), this.layers[this.selectedLayerIndex]);
+
+	                switch (this.tools.getCurrentTool()) {
+	                    case this.tools.type.select:
+	                        selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "select", this.tools.getCurrentTool()));
+	                        this.selection.setSelectedShape(selectedLayer.getCurrentShape(), this.layers[this.selectedLayerIndex]);
+	                        break;
+	                    case this.tools.type.rectangle:
+	                        if (this.rightMousePressed) selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "subtract", this.tools.getCurrentTool()));else selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "add", this.tools.getCurrentTool()));
+	                        break;
+	                    default:
 	                }
-	                //next 2 condition checks assume the selected tool is rectangle
-	                else if (this.rightMousePressed) {
-	                        selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "subtract", this.tools.getCurrentTool()));
-	                    } else {
-	                        selectedLayer.addShapeToLayer(new _rectangle.Rectangle(new _point.Point(relativeCoords.x, relativeCoords.y, pageIndex), 0, 0, "add", this.tools.getCurrentTool()));
-	                    }
+
 	                this.redrawLayer(selectedLayer);
 	            }
 	        }
+
+	        /*
+	            1. Checks if drawing is valid
+	            2. Updates the height and width of the current rectangle in the selected layer depending on mouse position
+	               or shift press (square)
+	            3. Creates a new Rectangle if the layer was changed mid draw
+	         */
+
 	    }, {
 	        key: 'rectanglePreview',
 	        value: function rectanglePreview(mousePos) {
@@ -983,40 +998,32 @@
 	            if (this.core.getSettings().currentPageIndex !== this.layers[0].pageIndex) return;
 
 	            if (!this.layerChangedMidDraw) {
-	                if (!this.mousePressed) {
-	                    return;
-	                }
+	                if (!this.mousePressed) return;
 
 	                var pageIndex = this.core.getSettings().currentPageIndex,
 	                    zoomLevel = this.core.getSettings().zoomLevel,
 	                    renderer = this.core.getSettings().renderer,
 	                    relativeCoords = new _point.Point().getRelativeCoordinatesFromPadded(pageIndex, renderer, mousePos.x, mousePos.y, zoomLevel),
-	                    lastShape = this.layers[this.selectedLayerIndex].getCurrentShape();
+	                    rectangle = this.layers[this.selectedLayerIndex].getCurrentShape();
 
 	                if (!this.uiManager.isInPageBounds(relativeCoords.x, relativeCoords.y)) return;
 
-	                // If cursor is to the main diagonal (south east or north west of the point of origin)
-	                if (this.isInMainDiagonal(relativeCoords, lastShape)) {
-	                    var lastWidth = lastShape.relativeRectWidth;
-	                    lastShape.relativeRectWidth = relativeCoords.x - lastShape.origin.relativeOriginX;
+	                var lastWidth = rectangle.relativeRectWidth;
+	                rectangle.relativeRectWidth = relativeCoords.x - rectangle.origin.relativeOriginX;
 
-	                    // Draw a square on shift down
-	                    if (this.shiftDown) {
-	                        var squareInBounds = this.uiManager.isInPageBounds(lastShape.origin.relativeOriginX + lastShape.relativeRectWidth, lastShape.origin.relativeOriginY + lastShape.relativeRectWidth);
+	                // Draw square
+	                if (this.shiftDown) {
+	                    var mainDiagonal = void 0;
 
-	                        if (squareInBounds) lastShape.relativeRectHeight = lastShape.relativeRectWidth;else lastShape.relativeRectWidth = lastWidth;
-	                    } else lastShape.relativeRectHeight = relativeCoords.y - lastShape.origin.relativeOriginY;
-	                } else // If cursor is to the antidiagonal (north east or south west of the point of origin)
-	                    {
-	                        var _lastWidth = lastShape.relativeRectWidth;
-	                        lastShape.relativeRectWidth = relativeCoords.x - lastShape.origin.relativeOriginX;
+	                    if (this.isInMainDiagonal(relativeCoords, rectangle)) mainDiagonal = 1;else mainDiagonal = -1;
 
-	                        if (this.shiftDown) {
-	                            var _squareInBounds = this.uiManager.isInPageBounds(lastShape.origin.relativeOriginX + lastShape.relativeRectWidth, lastShape.origin.relativeOriginY - lastShape.relativeRectWidth);
+	                    var squareInBounds = this.uiManager.isInPageBounds(rectangle.origin.relativeOriginX + rectangle.relativeRectWidth, rectangle.origin.relativeOriginY + mainDiagonal * rectangle.relativeRectWidth);
 
-	                            if (_squareInBounds) lastShape.relativeRectHeight = -lastShape.relativeRectWidth;else lastShape.relativeRectWidth = _lastWidth;
-	                        } else lastShape.relativeRectHeight = relativeCoords.y - lastShape.origin.relativeOriginY;
-	                    }
+	                    if (squareInBounds) rectangle.relativeRectHeight = mainDiagonal * rectangle.relativeRectWidth;else rectangle.relativeRectWidth = lastWidth;
+	                } else {
+	                    rectangle.relativeRectHeight = relativeCoords.y - rectangle.origin.relativeOriginY;
+	                }
+
 	                this.redrawLayer(this.layers[this.selectedLayerIndex]);
 	            } else {
 	                // Create a new rectangle to which the change will be
@@ -1025,8 +1032,8 @@
 	            }
 	        }
 	    }, {
-	        key: 'initializeBrushChange',
-	        value: function initializeBrushChange(mousePos) {
+	        key: 'initializeBrushSizeChange',
+	        value: function initializeBrushSizeChange(mousePos) {
 	            var brushSizeSlider = document.getElementById("brush-size-selector");
 	            this.prevMouseX = mousePos.x;
 	            this.prevSize = brushSizeSlider.value;
@@ -1043,11 +1050,18 @@
 	        }
 
 	        // TODO: Generalize so that function returns any general relative position using enums
+	        /**
+	         * Returns true if the relative coordinates provided are on the main diagonal of the origin of the shape (south east or
+	         * north west of the origin) otherwise returns false
+	         * @param relativeCoords
+	         * @param shape
+	         * @returns {boolean}
+	         */
 
 	    }, {
 	        key: 'isInMainDiagonal',
-	        value: function isInMainDiagonal(relativeCoords, lastShape) {
-	            if (relativeCoords.x < lastShape.origin.relativeOriginX && relativeCoords.y < lastShape.origin.relativeOriginY) return true;else if (relativeCoords.x > lastShape.origin.relativeOriginX && relativeCoords.y > lastShape.origin.relativeOriginY) return true;
+	        value: function isInMainDiagonal(relativeCoords, shape) {
+	            if (relativeCoords.x < shape.origin.relativeOriginX && relativeCoords.y < shape.origin.relativeOriginY) return true;else if (relativeCoords.x > shape.origin.relativeOriginX && relativeCoords.y > shape.origin.relativeOriginY) return true;
 
 	            return false;
 	        }
@@ -1059,11 +1073,21 @@
 	    }, {
 	        key: 'redrawAllLayers',
 	        value: function redrawAllLayers() {
-	            var _this7 = this;
+	            var _this6 = this;
 
 	            this.layers.forEach(function (layer) {
-	                _this7.redrawLayer(layer);
+	                _this6.redrawLayer(layer);
 	            });
+	        }
+	    }, {
+	        key: 'changeCurrentlySelectedLayerIndex',
+	        value: function changeCurrentlySelectedLayerIndex(newIndex) {
+	            this.selectedLayerIndex = newIndex;
+	            if (this.selection !== null) {
+	                if (this.selection.imageData === null) {
+	                    this.selection.clearSelection(this.core.getSettings().maxZoomLevel);
+	                }
+	            }
 	        }
 
 	        /**
@@ -1071,15 +1095,6 @@
 	         *                    Export
 	         * ===============================================
 	         **/
-
-	    }, {
-	        key: 'createBackgroundLayer',
-	        value: function createBackgroundLayer() {
-	            var pageIndex = this.core.getSettings().currentPageIndex,
-	                zoomLevel = this.core.getSettings().zoomLevel;
-
-	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).createBackgroundLayer();
-	        }
 
 	        // Will fill a canvas with the highlighted data and scan every pixel of that and fill another canvas with diva data
 	        // on the highlighted regions
@@ -1094,20 +1109,12 @@
 	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersAsImageData();
 	        }
 	    }, {
-	        key: 'exportToRodan',
-	        value: function exportToRodan() {
+	        key: 'exportAsPNG',
+	        value: function exportAsPNG() {
 	            var pageIndex = this.core.getSettings().currentPageIndex,
 	                zoomLevel = this.core.getSettings().zoomLevel;
 
-	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersToRodan();
-	        }
-	    }, {
-	        key: 'exportAsHighlights',
-	        value: function exportAsHighlights() {
-	            var pageIndex = this.core.getSettings().currentPageIndex,
-	                zoomLevel = this.core.getSettings().zoomLevel;
-
-	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersAsHighlights();
+	            new _export.Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).exportLayersAsPNG();
 	        }
 	    }, {
 	        key: 'exportAsCSV',
@@ -1127,109 +1134,7 @@
 	    }, {
 	        key: 'importPNGToLayer',
 	        value: function importPNGToLayer(e) {
-	            new _import.Import(this, this.layers, this.core.getSettings().currentPageIndex, this.core.getSettings().zoomLevel, this.uiManager).uploadLayerPNGToCanvas(this.layers[this.selectedLayerIndex], e);
-	        }
-
-	        /**
-	         * ===============================================
-	         *                     Tutorial
-	         * ===============================================
-	         **/
-
-	    }, {
-	        key: 'tutorial',
-	        value: function tutorial() {
-	            var overlay = document.createElement('div');
-	            overlay.setAttribute("id", "tutorial-div");
-
-	            var background = document.createElement('div');
-	            background.setAttribute("id", "tutorial-overlay");
-
-	            var modal = document.createElement('div');
-	            modal.setAttribute("id", "myModal");
-	            modal.setAttribute("class", "modal");
-
-	            var modalContent = document.createElement('div');
-	            modalContent.setAttribute("class", "modal-content");
-
-	            var modalHeader = document.createElement('div');
-	            modalHeader.setAttribute("class", "modal-header");
-
-	            var text = document.createTextNode("Hello, World");
-	            var h2 = document.createElement('h2');
-	            h2.appendChild(text);
-
-	            var closeModal = document.createElement('span');
-	            closeModal.setAttribute("class", "close");
-	            closeModal.innerHTML = "&times;";
-
-	            var modalBody = document.createElement('div');
-	            modalBody.setAttribute("class", "modal-body");
-
-	            var tutorialP = document.createElement('p');
-	            tutorialP.innerHTML = "The following is a glossary of the hotkeys you will find useful when using Pixel.js";
-
-	            var hotkeyGlossary = document.createElement('ul');
-	            hotkeyGlossary.setAttribute("style", "list-style-type:none;");
-
-	            var LayerSelect = document.createElement('li');
-	            LayerSelect.innerHTML = "<kbd>1</kbd> ... <kbd>9</kbd> layer select";
-
-	            var brushTool = document.createElement('li');
-	            brushTool.innerHTML = "<kbd>b</kbd> brush tool";
-
-	            var rectangleTool = document.createElement('li');
-	            rectangleTool.innerHTML = "<kbd>r</kbd> rectangle tool";
-
-	            var grabTool = document.createElement('li');
-	            grabTool.innerHTML = "<kbd>g</kbd> grab tool";
-
-	            var eraserTool = document.createElement('li');
-	            eraserTool.innerHTML = "<kbd>e</kbd> eraser tool";
-
-	            var shift = document.createElement('li');
-	            shift.innerHTML = "<kbd>Shift</kbd>  force tools to paint in an exact way.";
-
-	            var undo = document.createElement('li');
-	            undo.innerHTML = "<kbd>cmd</kbd> + <kbd>z</kbd> undo";
-
-	            var redo = document.createElement('li');
-	            redo.innerHTML = "<kbd>cmd</kbd> + <kbd>Shift</kbd> + <kbd>z</kbd> redo";
-
-	            var modalFooter = document.createElement('div');
-	            modalFooter.setAttribute("class", "modal-footer");
-
-	            var close = document.createElement('h2');
-	            close.innerHTML = "Got It!";
-
-	            hotkeyGlossary.appendChild(LayerSelect);
-	            hotkeyGlossary.appendChild(brushTool);
-	            hotkeyGlossary.appendChild(rectangleTool);
-	            hotkeyGlossary.appendChild(grabTool);
-	            hotkeyGlossary.appendChild(eraserTool);
-	            hotkeyGlossary.appendChild(shift);
-	            hotkeyGlossary.appendChild(undo);
-	            hotkeyGlossary.appendChild(redo);
-
-	            modal.appendChild(modalContent);
-	            modalContent.appendChild(modalHeader);
-	            modalContent.appendChild(modalBody);
-	            modalContent.appendChild(modalFooter);
-	            modalHeader.appendChild(h2);
-	            modalHeader.appendChild(closeModal);
-	            modalBody.appendChild(tutorialP);
-	            modalBody.appendChild(hotkeyGlossary);
-	            modalFooter.appendChild(close);
-
-	            overlay.appendChild(background);
-	            overlay.appendChild(modal);
-	            document.body.appendChild(overlay);
-
-	            modal.style.display = "block";
-
-	            modalFooter.addEventListener("click", function () {
-	                overlay.parentNode.removeChild(overlay);
-	            });
+	            new _import.Import(this, this.layers, this.core.getSettings().currentPageIndex, this.core.getSettings().zoomLevel, this.uiManager).uploadLocalImageToLayer(this.layers[this.selectedLayerIndex], e);
 	        }
 	    }]);
 
@@ -1254,135 +1159,268 @@
 /***/ }),
 /* 1 */,
 /* 2 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
+	exports.PixelWrapper = undefined;
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+	var _rectangle = __webpack_require__(3);
+
+	var _point = __webpack_require__(5);
+
+	var _layer = __webpack_require__(7);
+
+	var _colour = __webpack_require__(6);
+
+	var _export = __webpack_require__(10);
+
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var Point = exports.Point = function () {
-	    /**
-	     * The relative origins allow to position the point at the same page location no matter what the zoom level is
-	     * @param relativeOriginX
-	     * @param relativeOriginY
-	     * @param pageIndex
-	     */
-	    function Point(relativeOriginX, relativeOriginY, pageIndex) {
-	        _classCallCheck(this, Point);
+	var PixelWrapper = exports.PixelWrapper = function () {
+	    function PixelWrapper(pixelInstance) {
+	        _classCallCheck(this, PixelWrapper);
 
-	        this.relativeOriginX = relativeOriginX;
-	        this.relativeOriginY = relativeOriginY;
-	        this.pageIndex = pageIndex;
+	        this.pixelInstance = pixelInstance;
+	        this.layers = pixelInstance.layers;
+	        this.layersCount = this.layers.length;
+	        this.uiManager = pixelInstance.uiManager;
+	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
+	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
+	        this.exportInterrupted = false;
 	    }
 
-	    /**
-	     * Calculates the coordinates of a point on a page in pixels given the zoom level
-	     * where the top left corner of the page always represents the (0,0) coordinate.
-	     * The function scales the relative coordinates to the required zoom level.
-	     * @param zoomLevel
-	     * @returns {{x: number, y: number}}
-	     */
+	    _createClass(PixelWrapper, [{
+	        key: 'activate',
+	        value: function activate() {
+	            this.createLayers();
+	            this.createButtons();
+	            this.rodanImagesToCanvas();
+	        }
+	    }, {
+	        key: 'deactivate',
+	        value: function deactivate() {
+	            this.destroyButtons();
+	        }
+	    }, {
+	        key: 'createLayers',
+	        value: function createLayers() {
+	            var layer2 = new _layer.Layer(2, new _colour.Colour(255, 51, 102, 1), "Layer 2", this.pixelInstance, 0.5),
+	                layer3 = new _layer.Layer(3, new _colour.Colour(255, 255, 10, 1), "Layer 3", this.pixelInstance, 0.5);
 
+	            this.layers.push(layer2);
+	            this.layers.push(layer3);
+	            this.pixelInstance.layerIdCounter = this.layers.length + 1;
+	        }
+	    }, {
+	        key: 'createButtons',
+	        value: function createButtons() {
+	            var _this = this;
 
-	    _createClass(Point, [{
-	        key: "getCoordsInPage",
-	        value: function getCoordsInPage(zoomLevel) {
-	            var scaleRatio = Math.pow(2, zoomLevel);
-	            return {
-	                x: this.relativeOriginX * scaleRatio,
-	                y: this.relativeOriginY * scaleRatio
-	            };
+	            var rodanExportButton = document.createElement("button"),
+	                rodanExportText = document.createTextNode("Submit To Rodan");
+
+	            this.exportToRodan = function () {
+	                _this.checkValid();
+	            }; // This will call exportLayersToRodan when done
+
+	            rodanExportButton.setAttribute("id", "rodan-export-button");
+	            rodanExportButton.appendChild(rodanExportText);
+	            rodanExportButton.addEventListener("click", this.exportToRodan);
+
+	            document.body.appendChild(rodanExportButton);
+	        }
+	    }, {
+	        key: 'destroyButtons',
+	        value: function destroyButtons() {
+	            var rodanExportButton = document.getElementById("rodan-export-button");
+
+	            rodanExportButton.parentNode.removeChild(rodanExportButton);
+	        }
+	    }, {
+	        key: 'checkValid',
+	        value: function checkValid() {
+	            if (this.layers.length !== 3) {
+	                window.alert("You need to have exactly 3 layers for classification!");
+	            } else {
+	                this.layersCount = this.layers.length;
+	                this.createBackgroundLayer();
+	            }
+	        }
+	    }, {
+	        key: 'exportLayersToRodan',
+	        value: function exportLayersToRodan() {
+	            var _this2 = this;
+
+	            console.log("Exporting!");
+
+	            var count = this.layers.length;
+	            var urlList = [];
+
+	            this.layers.forEach(function (layer) {
+
+	                console.log(layer.layerId + " " + layer.layerName);
+
+	                var dataURL = layer.getCanvas().toDataURL();
+	                urlList[layer.layerId] = dataURL;
+	                count -= 1;
+	                if (count === 0) {
+	                    console.log(urlList);
+	                    console.log(_this2.layers.length);
+	                    console.log("done");
+
+	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
+	                }
+	            });
 	        }
 
 	        /**
-	         * Calculates the coordinates of a point on the canvas in pixels, where the top left corner of the canvas
-	         * represents the (0,0) coordinate.
-	         * This is relative to the viewport padding.
-	         * @param zoomLevel
-	         * @param pageIndex
-	         * @param renderer
-	         * @returns {{x: number, y: number}}
+	         *  Generates a background layer by iterating over all the pixel data for each layer and 
+	         *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
+	         *  replicates what the exportLayersAsImageData function does but for generating the background
+	         *  layer, and there are numerous (albeit small) differences that requires a new function
 	         */
 
 	    }, {
-	        key: "getCoordsInViewport",
-	        value: function getCoordsInViewport(zoomLevel, pageIndex, renderer) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+	        key: 'createBackgroundLayer',
+	        value: function createBackgroundLayer() {
+	            var _this3 = this;
 
-	            var absoluteCoordinates = this.getCoordsInPage(zoomLevel);
+	            var backgroundLayer = new _layer.Layer(this.layersCount + 1, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
+	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
+	                pageIndex = this.pageIndex,
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
 
-	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
-	            // (to make it look like it is on top of a page in Diva)
-	            var offsetX = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteCoordinates.x,
-	                offsetY = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteCoordinates.y;
+	            // Highlight whole image for background layer
+	            var rect = new _rectangle.Rectangle(new _point.Point(0, 0, pageIndex), width, height, "add");
+	            backgroundLayer.addShapeToLayer(rect);
+	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
-	            return {
-	                x: offsetX,
-	                y: offsetY
-	            };
-	        }
+	            // Instantiate progress bar
+	            this.uiManager.createExportElements(this);
 
-	        /**
-	         * Calculates the coordinates of a point on a page in pixels from the padded coordinates used to display the point on canvas
-	         * @param pageIndex
-	         * @param renderer
-	         * @param paddedX
-	         * @param paddedY
-	         * @returns {{x: number, y: number}}
-	         */
+	            this.layers.forEach(function (layer) {
+	                // Create layer canvas and draw (so pixel data can be accessed)
+	                var layerCanvas = document.createElement('canvas');
+	                layerCanvas.setAttribute("class", "export-page-canvas");
+	                layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
+	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
+	                layerCanvas.width = width;
+	                layerCanvas.height = height;
+	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
 
-	    }, {
-	        key: "getAbsoluteCoordinatesFromPadded",
-	        value: function getAbsoluteCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
-
-	            return {
-	                x: Math.round(paddedX - (renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX)),
-	                y: Math.round(paddedY - (renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY))
-	            };
+	                _this3.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+	            });
 	        }
 	    }, {
-	        key: "getPaddedCoordinatesFromAbsolute",
-	        value: function getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteX, absoluteY) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+	        key: 'subtractLayerFromBackground',
+	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
+	            var _this4 = this;
 
-	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
-	            // (to make it look like it is on top of a page in Diva)
+	            var chunkSize = width,
+	                chunkNum = 0,
+	                row = 0,
+	                col = 0,
+	                pixelCtx = layerCanvas.getContext('2d');
+	            var doChunk = function doChunk() {
+	                // Use this method instead of nested for so UI isn't blocked
+	                var cnt = chunkSize;
+	                chunkNum++;
+	                while (cnt--) {
+	                    if (row >= height) break;
+	                    if (col < width) {
+	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
+	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
+	                        if (colour.alpha !== 0) {
+	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
+	                            backgroundLayer.addShapeToLayer(currentPixel);
+	                        }
+	                        col++;
+	                    } else {
+	                        // Reached end of row, jump to next
+	                        row++;
+	                        col = 0;
+	                    }
+	                }
+	                if (_this4.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
+	                    // recall function
+	                    setTimeout(doChunk, 1);
+	                }
+	            };
+	            doChunk();
+	        }
+	    }, {
+	        key: 'progress',
+	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer) {
+	            if (row === height || this.exportInterrupted) {
+	                this.layersCount -= 1;
+	            }
+	            if (row < height && !this.exportInterrupted) {
+	                var percentage = chunkNum * chunkSize * 100 / (height * chunkSize),
+	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
+	                this.pixelInstance.uiManager.updateProgress(roundedPercentage);
+	                return {
+	                    needsRecall: true
+	                };
+	            } else {
+	                if (this.exportInterrupted && this.layersCount === 0) {
+	                    this.exportInterrupted = false;
+	                    this.uiManager.destroyExportElements();
+	                } else if (this.exportInterrupted) {
+	                    // Do nothing and wait until last layer has finished processing to cancel
+	                } else if (this.layersCount === 0) {
+	                    // Done generating background layer
+	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
+	                    this.layers.push(backgroundLayer);
+	                    this.uiManager.destroyExportElements();
+	                    this.exportLayersToRodan();
+	                }
+	            }
 	            return {
-	                x: renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteX,
-	                y: renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteY
+	                needsRecall: false
 	            };
 	        }
 	    }, {
-	        key: "getRelativeCoordinatesFromPadded",
-	        value: function getRelativeCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY, zoomLevel) {
-	            var scaleRatio = Math.pow(2, zoomLevel);
+	        key: 'rodanImagesToCanvas',
+	        value: function rodanImagesToCanvas() {
+	            var _this5 = this;
 
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+	            this.layers.forEach(function (layer) {
+	                // Current implementation only supports 3 layers
+	                var img = document.getElementById("layer" + layer.layerId + "-img");
+	                if (img !== null) {
+	                    var imageCanvas = document.createElement("canvas");
+	                    imageCanvas.width = layer.getCanvas().width;
+	                    imageCanvas.height = layer.getCanvas().height;
+	                    var ctx = imageCanvas.getContext("2d");
 
-	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
-	            // (to make it look like it is on top of a page in Diva)
-	            var absoluteRectOriginX = paddedX - renderer._getImageOffset(pageIndex).left + renderer._viewport.left - viewportPaddingX,
-	                absoluteRectOriginY = paddedY - renderer._getImageOffset(pageIndex).top + renderer._viewport.top - viewportPaddingY;
+	                    ctx.drawImage(img, 0, 0);
 
-	            return {
-	                x: absoluteRectOriginX / scaleRatio,
-	                y: absoluteRectOriginY / scaleRatio
-	            };
+	                    var imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
+	                        data = imageData.data;
+
+	                    for (var i = 0; i < data.length; i += 4) {
+	                        data[i] = layer.colour.red; // red
+	                        data[i + 1] = layer.colour.green; // green
+	                        data[i + 2] = layer.colour.blue; // blue
+	                    }
+	                    // overwrite original image
+	                    ctx.putImageData(imageData, 0, 0);
+
+	                    layer.backgroundImageCanvas = imageCanvas;
+	                    layer.drawLayer(_this5.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
+	                }
+	            });
 	        }
 	    }]);
 
-	    return Point;
+	    return PixelWrapper;
 	}();
 
 /***/ }),
@@ -1400,15 +1438,16 @@
 
 	var _shape = __webpack_require__(4);
 
-	var _colour = __webpack_require__(5);
+	var _colour = __webpack_require__(6);
 
-	var _point = __webpack_require__(2);
+	var _point = __webpack_require__(5);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*jshint esversion: 6 */
+
 
 	var Rectangle = exports.Rectangle = function (_Shape) {
 	    _inherits(Rectangle, _Shape);
@@ -1610,11 +1649,12 @@
 	});
 	exports.Shape = undefined;
 
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
-	var _point = __webpack_require__(2);
 
-	var _colour = __webpack_require__(5);
+	var _point = __webpack_require__(5);
+
+	var _colour = __webpack_require__(6);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1756,6 +1796,165 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
+	var Point = exports.Point = function () {
+	    /**
+	     * The relative origins allow to position the point at the same page location no matter what the zoom level is
+	     * @param relativeOriginX
+	     * @param relativeOriginY
+	     * @param pageIndex
+	     */
+	    function Point(relativeOriginX, relativeOriginY, pageIndex) {
+	        _classCallCheck(this, Point);
+
+	        this.relativeOriginX = relativeOriginX;
+	        this.relativeOriginY = relativeOriginY;
+	        this.pageIndex = pageIndex;
+	    }
+
+	    /**
+	     * Calculates the coordinates of a point on a page in pixels given the zoom level
+	     * where the top left corner of the page always represents the (0,0) coordinate.
+	     * The function scales the relative coordinates to the required zoom level.
+	     * @param zoomLevel
+	     * @returns {{x: number, y: number}}
+	     */
+
+
+	    _createClass(Point, [{
+	        key: "getCoordsInPage",
+	        value: function getCoordsInPage(zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+	            return {
+	                x: this.relativeOriginX * scaleRatio,
+	                y: this.relativeOriginY * scaleRatio
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on the diva canvas (viewport) in pixels, where the top left corner of the canvas
+	         * represents the (0,0) coordinate.
+	         * This is relative to the viewport padding.
+	         * @param zoomLevel
+	         * @param pageIndex
+	         * @param renderer
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getCoordsInViewport",
+	        value: function getCoordsInViewport(zoomLevel, pageIndex, renderer) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            var absoluteCoordinates = this.getCoordsInPage(zoomLevel);
+
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            var offsetX = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteCoordinates.x,
+	                offsetY = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteCoordinates.y;
+
+	            return {
+	                x: offsetX,
+	                y: offsetY
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on a page in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getAbsoluteCoordinatesFromPadded",
+	        value: function getAbsoluteCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            return {
+	                x: Math.round(paddedX - (renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX)),
+	                y: Math.round(paddedY - (renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY))
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on diva canvas (viewport) in pixels
+	         * from the absolute coordinates on the page
+	         * @param pageIndex
+	         * @param renderer
+	         * @param absoluteX
+	         * @param absoluteY
+	         * @returns {{x: *, y: *}}
+	         */
+
+	    }, {
+	        key: "getPaddedCoordinatesFromAbsolute",
+	        value: function getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteX, absoluteY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            return {
+	                x: renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteX,
+	                y: renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteY
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point relative to a page (used to calculate the absolute coordinates at different zoom levels) in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @param zoomLevel
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getRelativeCoordinatesFromPadded",
+	        value: function getRelativeCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY, zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	            // (to make it look like it is on top of a page in Diva)
+	            var absoluteRectOriginX = paddedX - renderer._getImageOffset(pageIndex).left + renderer._viewport.left - viewportPaddingX,
+	                absoluteRectOriginY = paddedY - renderer._getImageOffset(pageIndex).top + renderer._viewport.top - viewportPaddingY;
+
+	            return {
+	                x: absoluteRectOriginX / scaleRatio,
+	                y: absoluteRectOriginY / scaleRatio
+	            };
+	        }
+	    }]);
+
+	    return Point;
+	}();
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
 	var Colour = exports.Colour = function () {
 	    function Colour(red, green, blue, alpha) {
 	        _classCallCheck(this, Colour);
@@ -1777,6 +1976,12 @@
 	        value: function toHTMLColour() {
 	            return "rgba(" + this.red + ", " + this.green + ", " + this.blue + ", " + this.alpha + ")";
 	        }
+
+	        /**
+	         * Returns the Colour object in a hexadecimal string format (#RRGGBB)
+	         * @returns {string}
+	         */
+
 	    }, {
 	        key: "toHexString",
 	        value: function toHexString() {
@@ -1797,11 +2002,17 @@
 
 	            return hexString;
 	        }
+
+	        /**
+	         * Compares 2 colours to each other based on a certain tolerance
+	         * @param colour
+	         * @param tolerance
+	         * @returns {boolean}
+	         */
+
 	    }, {
 	        key: "isSimilarTo",
-	        value: function isSimilarTo(colour) {
-	            var tolerance = 1;
-
+	        value: function isSimilarTo(colour, tolerance) {
 	            if (!(colour.red >= this.red - tolerance && colour.red <= this.red + tolerance)) return false;
 
 	            if (!(colour.blue >= this.blue - tolerance && colour.blue <= this.blue + tolerance)) return false;
@@ -1816,7 +2027,7 @@
 	}();
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1826,18 +2037,19 @@
 	});
 	exports.Layer = undefined;
 
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
-	var _path = __webpack_require__(7);
 
-	var _point = __webpack_require__(2);
+	var _path = __webpack_require__(8);
 
-	var _action = __webpack_require__(8);
+	var _point = __webpack_require__(5);
+
+	var _action = __webpack_require__(9);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var Layer = exports.Layer = function () {
-	    function Layer(layerId, colour, layerName, pixelInstance, layerOpacity, globalActions) {
+	    function Layer(layerId, colour, layerName, pixelInstance, layerOpacity) {
 	        _classCallCheck(this, Layer);
 
 	        this.layerId = layerId;
@@ -1852,10 +2064,15 @@
 	        this.layerOpacity = layerOpacity;
 	        this.pixelInstance = pixelInstance;
 	        this.pageIndex = this.pixelInstance.core.getSettings().currentPageIndex;
-	        this.preBinarizedImageCanvas = null;
+	        this.backgroundImageCanvas = null;
 	        this.pastedRegions = [];
 	        this.cloneCanvas();
 	    }
+
+	    /**
+	     * Creates a layer canvas that is the same size as a page in diva
+	     */
+
 
 	    _createClass(Layer, [{
 	        key: 'cloneCanvas',
@@ -1876,9 +2093,9 @@
 	            this.resizeLayerCanvasToZoomLevel(this.pixelInstance.core.getSettings().zoomLevel);
 	            this.placeLayerCanvasOnTopOfEditingPage();
 
-	            this.preBinarizedImageCanvas = document.createElement("canvas");
-	            this.preBinarizedImageCanvas.width = this.canvas.width;
-	            this.preBinarizedImageCanvas.height = this.canvas.height;
+	            this.backgroundImageCanvas = document.createElement("canvas");
+	            this.backgroundImageCanvas.width = this.canvas.width;
+	            this.backgroundImageCanvas.height = this.canvas.height;
 	        }
 	    }, {
 	        key: 'resizeLayerCanvasToZoomLevel',
@@ -2031,22 +2248,6 @@
 	            }
 	        }
 	    }, {
-	        key: 'deactivateLayer',
-	        value: function deactivateLayer() {
-	            this.activated = false;
-	            this.clearCtx();
-	        }
-	    }, {
-	        key: 'activateLayer',
-	        value: function activateLayer() {
-	            this.activated = true;
-	        }
-	    }, {
-	        key: 'toggleLayerActivation',
-	        value: function toggleLayerActivation() {
-	            this.activated = !this.activated;
-	        }
-	    }, {
 	        key: 'isActivated',
 	        value: function isActivated() {
 	            return this.activated;
@@ -2083,7 +2284,7 @@
 	            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	            // Redraw PreBinarized Image on layer canvas
-	            if (this.preBinarizedImageCanvas !== null) ctx.drawImage(this.preBinarizedImageCanvas, 0, 0);
+	            if (this.backgroundImageCanvas !== null) ctx.drawImage(this.backgroundImageCanvas, 0, 0);
 
 	            // Redraw all actions
 	            this.actions.forEach(function (action) {
@@ -2091,9 +2292,9 @@
 	            });
 	        }
 	    }, {
-	        key: 'setPreBinarizedImageCanvas',
-	        value: function setPreBinarizedImageCanvas(canvas) {
-	            this.preBinarizedImageCanvas = canvas;
+	        key: 'setBackgroundImageCanvas',
+	        value: function setBackgroundImageCanvas(canvas) {
+	            this.backgroundImageCanvas = canvas;
 	        }
 	    }, {
 	        key: 'addToPastedRegions',
@@ -2118,13 +2319,86 @@
 	            var globalActionIndex = this.pixelInstance.actions.indexOf(action);
 	            this.pixelInstance.actions.splice(globalActionIndex, 1);
 	        }
+	    }, {
+	        key: 'displayColourOptions',
+	        value: function displayColourOptions() {
+	            // TODO: Implement function
+	            console.log("colour clicked here");
+	        }
+
+	        /**
+	         * Displays the layer options (such as opacity) as a drop down from the layer selectors
+	         */
+
+	    }, {
+	        key: 'displayLayerOptions',
+	        value: function displayLayerOptions() {
+	            var layerOptionsDiv = document.getElementById("layer-" + this.layerId + "-options");
+
+	            if (layerOptionsDiv.classList.contains("unchecked-layer-settings")) //It is unchecked, check it
+	                {
+	                    layerOptionsDiv.classList.remove("unchecked-layer-settings");
+	                    layerOptionsDiv.classList.add("checked-layer-settings");
+	                    this.pixelInstance.uiManager.createOpacitySlider(this, layerOptionsDiv.parentElement.parentElement, layerOptionsDiv.parentElement);
+	                } else {
+	                layerOptionsDiv.classList.remove("checked-layer-settings");
+	                layerOptionsDiv.classList.add("unchecked-layer-settings");
+	                this.pixelInstance.uiManager.destroyOpacitySlider(this);
+	            }
+	        }
+
+	        /**
+	         * Visually displays a layer
+	         */
+
+	    }, {
+	        key: 'activateLayer',
+	        value: function activateLayer() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            layerActivationDiv.classList.remove("layer-deactivated");
+	            layerActivationDiv.classList.add("layer-activated");
+	            this.getCanvas().style.opacity = this.getLayerOpacity();
+
+	            if (this.layerId === this.pixelInstance.background.layerId) // Background
+	                {
+	                    this.activated = true;
+	                } else {
+	                this.activated = true;
+	                this.pixelInstance.redrawLayer(this);
+	            }
+	        }
+	    }, {
+	        key: 'deactivateLayer',
+	        value: function deactivateLayer() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            layerActivationDiv.classList.remove("layer-activated");
+	            layerActivationDiv.classList.add("layer-deactivated");
+	            this.activated = false;
+
+	            if (this.layerId === this.pixelInstance.background.layerId) // Background
+	                {
+	                    this.getCanvas().style.opacity = 0;
+	                } else {
+	                this.clearCtx();
+	            }
+	        }
+	    }, {
+	        key: 'toggleLayerActivation',
+	        value: function toggleLayerActivation() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            if (layerActivationDiv.classList.contains("layer-deactivated")) {
+	                this.activateLayer();
+	            } else {
+	                this.deactivateLayer();
+	            }
+	        }
 	    }]);
 
 	    return Layer;
 	}();
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -2137,6 +2411,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
 	var Path = exports.Path = function () {
 	    function Path(brushSize, blendMode) {
 	        _classCallCheck(this, Path);
@@ -2176,6 +2451,22 @@
 	                isDown = true;
 	            });
 	        }
+
+	        /**
+	         * Calculates the coordinates of the point to be added depending on the specified coordinates system
+	         * Places a point in the path
+	         * Only connects a point to the previous on if isDown is true
+	         * This is mainly used when the user is in the process of drawing the path
+	         * @param layer
+	         * @param point
+	         * @param pageIndex
+	         * @param zoomLevel
+	         * @param isDown
+	         * @param renderer
+	         * @param canvas
+	         * @param coordinatesSystem
+	         */
+
 	    }, {
 	        key: "connectPoint",
 	        value: function connectPoint(layer, point, pageIndex, zoomLevel, isDown, renderer, canvas, coordinatesSystem) {
@@ -2234,7 +2525,7 @@
 	}();
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -2245,6 +2536,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
 	var Action = exports.Action = function Action(object, layer) {
 	    _classCallCheck(this, Action);
 
@@ -2253,7 +2545,7 @@
 	};
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2263,15 +2555,12 @@
 	});
 	exports.Export = undefined;
 
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
-	var _colour = __webpack_require__(5);
 
-	var _point = __webpack_require__(2);
+	var _colour = __webpack_require__(6);
 
-	var _layer = __webpack_require__(6);
-
-	var _rectangle = __webpack_require__(3);
+	var _point = __webpack_require__(5);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2288,143 +2577,18 @@
 	        this.zoomLevel = zoomLevel;
 	        this.matrix = null;
 	        this.uiManager = uiManager;
-	        this.layersCount = layers.length; // For generating the background layer, excludes background
 	    }
 
 	    /**
-	     *  Generates a background layer by iterating over all the pixel data for each layer and 
-	     *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
-	     *  replicates what the exportLayersAsImageData function does but for generating the background
-	     *  layer, and there are numerous (albeit small) differences that requires a new function
+	     * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
+	     * of the Diva page
 	     */
 
 
 	    _createClass(Export, [{
-	        key: 'createBackgroundLayer',
-	        value: function createBackgroundLayer() {
-	            var _this = this;
-
-	            // If generate background button has already been clicked, remove that background layer from layers
-	            if (document.getElementById("create-background-button").value === "clicked") {
-	                this.layers.pop();
-	                this.layersCount = this.layers.length;
-	            }
-
-	            var backgroundLayer = new _layer.Layer(this.layersCount + 1, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
-	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                pageIndex = this.pageIndex,
-	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
-
-	            // Highlight whole image for background layer
-	            var rect = new _rectangle.Rectangle(new _point.Point(0, 0, pageIndex), width, height, "add");
-	            backgroundLayer.addShapeToLayer(rect);
-	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
-
-	            // Instantiate progress bar
-	            this.uiManager.createExportElements(this);
-
-	            this.layers.forEach(function (layer) {
-	                // Create layer canvas and draw (so pixel data can be accessed)
-	                var layerCanvas = document.createElement('canvas');
-	                layerCanvas.setAttribute("class", "export-page-canvas");
-	                layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
-	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
-	                layerCanvas.width = width;
-	                layerCanvas.height = height;
-	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
-
-	                _this.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
-	            });
-	        }
-	    }, {
-	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
-	            var _this2 = this;
-
-	            var chunkSize = width,
-	                chunkNum = 0,
-	                row = 0,
-	                col = 0,
-	                pixelCtx = layerCanvas.getContext('2d');
-	            var doChunk = function doChunk() {
-	                // Use this method instead of nested for so UI isn't blocked
-	                var cnt = chunkSize;
-	                chunkNum++;
-	                while (cnt--) {
-	                    if (row >= height) break;
-	                    if (col < width) {
-	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
-	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-	                        if (colour.alpha !== 0) {
-	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
-	                            backgroundLayer.addShapeToLayer(currentPixel);
-	                        }
-	                        col++;
-	                    } else {
-	                        // Reached end of row, jump to next
-	                        row++;
-	                        col = 0;
-	                    }
-	                }
-	                if (_this2.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
-	                    // recall function
-	                    setTimeout(doChunk, 1);
-	                }
-	            };
-	            doChunk();
-	        }
-	    }, {
-	        key: 'progress',
-	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer) {
-	            if (row === height || this.exportInterrupted) {
-	                this.layersCount -= 1;
-	            }
-	            if (row < height && !this.exportInterrupted) {
-	                var percentage = chunkNum * chunkSize * 100 / (height * chunkSize),
-	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
-	                this.pixelInstance.uiManager.updateProgress(roundedPercentage);
-	                return {
-	                    needsRecall: true
-	                };
-	            } else {
-	                if (this.exportInterrupted && this.layersCount === 0) {
-	                    this.exportInterrupted = false;
-	                    this.uiManager.destroyExportElements();
-	                } else if (this.exportInterrupted) {
-	                    // Do nothing and wait until last layer has finished processing to cancel
-	                } else if (this.layersCount === 0) {
-	                    // Done generating background layer
-	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-	                    this.layers.push(backgroundLayer);
-	                    document.getElementById("create-background-button").innerText = "Background Generated!";
-	                    document.getElementById("create-background-button").value = "clicked";
-	                    this.uiManager.destroyExportElements();
-	                }
-	            }
-	            return {
-	                needsRecall: false
-	            };
-	        }
-
-	        /**
-	         * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
-	         * of the Diva page
-	         * We need to remove the background layer since otherwise the generation isn't done properly because of the
-	         * differing zoom mechanics for each layer. 
-	         */
-
-	    }, {
 	        key: 'exportLayersAsImageData',
 	        value: function exportLayersAsImageData() {
-	            var _this3 = this;
-
-	            // Ignore background layer if generated, readd at end
-	            var bgLayer;
-	            if (document.getElementById("create-background-button").value === "clicked") {
-	                bgLayer = this.layers.pop();
-	                this.exportLayersCount--;
-	            }
+	            var _this = this;
 
 	            this.dataCanvases = [];
 
@@ -2442,7 +2606,7 @@
 	                layerCanvas.width = width;
 	                layerCanvas.height = height;
 
-	                layer.drawLayerInPageCoords(_this3.zoomLevel, layerCanvas, _this3.pageIndex);
+	                layer.drawLayerInPageCoords(_this.zoomLevel, layerCanvas, _this.pageIndex);
 
 	                var pngCanvas = document.createElement('canvas');
 	                pngCanvas.setAttribute("class", "export-page-data-canvas");
@@ -2452,33 +2616,20 @@
 	                pngCanvas.width = width;
 	                pngCanvas.height = height;
 
-	                _this3.dataCanvases.push(pngCanvas);
-	                _this3.replaceLayerWithImageData(_this3.pixelInstance.core.getSettings().renderer._canvas, pngCanvas, _this3.pageIndex, layerCanvas, progressCanvas);
+	                _this.dataCanvases.push(pngCanvas);
+	                _this.getImageData(_this.pixelInstance.core.getSettings().renderer._canvas, pngCanvas, _this.pageIndex, layerCanvas, progressCanvas);
 	            });
-
-	            if (document.getElementById("create-background-button").value === "clicked") {
-	                this.layers.push(bgLayer);
-	            }
 	        }
 
 	        /**
 	         * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
 	         * of the Diva page
-	         * We need to remove the background layer since otherwise the generation isn't done properly because of the
-	         * differing zoom mechanics for each layer.
 	         */
 
 	    }, {
 	        key: 'exportLayersAsCSV',
 	        value: function exportLayersAsCSV() {
-	            var _this4 = this;
-
-	            // Ignore background layer if generated, readd at end
-	            var bgLayer;
-	            if (document.getElementById("create-background-button").value === "clicked") {
-	                bgLayer = this.layers.pop();
-	                this.exportLayersCount--;
-	            }
+	            var _this2 = this;
 
 	            var core = this.pixelInstance.core,
 	                height = core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.zoomLevel).height,
@@ -2496,34 +2647,8 @@
 	                layerCanvas.width = width;
 	                layerCanvas.height = height;
 
-	                layer.drawLayerInPageCoords(_this4.zoomLevel, layerCanvas, _this4.pageIndex);
-	                _this4.fillMatrix(layer, _this4.matrix, layerCanvas, progressCanvas);
-	            });
-
-	            if (document.getElementById("create-background-button").value === "clicked") {
-	                this.layers.push(bgLayer);
-	            }
-	        }
-	    }, {
-	        key: 'exportLayersToRodan',
-	        value: function exportLayersToRodan() {
-	            console.log("Exporting");
-
-	            var count = this.layers.length;
-	            var urlList = [];
-
-	            // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
-	            this.layers.forEach(function (layer) {
-
-	                var dataURL = layer.getCanvas().toDataURL();
-	                urlList[layer.layerId] = dataURL;
-	                count -= 1;
-	                if (count === 0) {
-	                    console.log(urlList);
-	                    console.log("done");
-
-	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
-	                }
+	                layer.drawLayerInPageCoords(_this2.zoomLevel, layerCanvas, _this2.pageIndex);
+	                _this2.fillMatrix(layer, _this2.matrix, layerCanvas, progressCanvas);
 	            });
 	        }
 
@@ -2532,9 +2657,16 @@
 	         */
 
 	    }, {
-	        key: 'exportLayersAsHighlights',
-	        value: function exportLayersAsHighlights() {
-	            console.log("Exporting");
+	        key: 'exportLayersAsPNG',
+	        value: function exportLayersAsPNG() {
+	            var linksDiv = document.getElementById("png-links-div");
+
+	            if (linksDiv !== null) {
+	                linksDiv.parentElement.removeChild(linksDiv);
+	            }
+
+	            linksDiv = document.createElement("div");
+	            linksDiv.setAttribute("id", "png-links-div");
 
 	            // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
 	            this.layers.forEach(function (layer) {
@@ -2550,8 +2682,9 @@
 
 	                        link = document.createElement("a");
 	                        link.appendChild(text);
-	                        document.body.appendChild(link);
+	                        linksDiv.appendChild(link);
 	                    }
+
 	                    // Browsers that support HTML5 download attribute
 	                    var url = URL.createObjectURL(blob);
 	                    link.setAttribute("class", "export-download");
@@ -2560,19 +2693,23 @@
 	                    link.setAttribute("download", layer.layerName);
 	                });
 	            });
+
+	            document.body.appendChild(linksDiv);
 	        }
 
 	        /**
-	         * Scans the canvas that it was initialized with and replaces its pixels with the actual image data from a divaCanvas
+	         * Scans the layer canvas and replaces its pixels with the actual image data from a divaCanvas
 	         * @param divaCanvas
 	         * @param drawingCanvas
 	         * @param pageIndex
+	         * @param canvasToScan
+	         * @param progressCanvas: Outputs a preview of the export image
 	         */
 
 	    }, {
-	        key: 'replaceLayerWithImageData',
-	        value: function replaceLayerWithImageData(divaCanvas, drawingCanvas, pageIndex, canvasToScan, progressCanvas) {
-	            var _this5 = this;
+	        key: 'getImageData',
+	        value: function getImageData(divaCanvas, drawingCanvas, pageIndex, canvasToScan, progressCanvas) {
+	            var _this3 = this;
 
 	            var chunkSize = canvasToScan.width,
 	                chunkNum = 0,
@@ -2594,7 +2731,7 @@
 	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
 	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
 
-	                        if (colour.alpha !== 0) _this5.drawImageDataOnCanvas(row, col, pageIndex, renderer, divaCanvas, drawingCanvas, progressCanvas);
+	                        if (colour.alpha !== 0) _this3.drawImageDataOnCanvas(row, col, pageIndex, renderer, divaCanvas, drawingCanvas, progressCanvas);
 
 	                        col++;
 	                    } else // New row
@@ -2604,12 +2741,26 @@
 	                        }
 	                }
 
-	                if (_this5.postProcessImageDataIteration(row, drawingCanvas, chunkNum, chunkSize, canvasToScan).needsRecall) setTimeout(doChunk, 1);
+	                if (_this3.postProcessImageDataIteration(row, drawingCanvas, chunkNum, chunkSize, canvasToScan).needsRecall) setTimeout(doChunk, 1);
 	            };
 
 	            // First call to the doChunck function
 	            doChunk();
 	        }
+
+	        /**
+	         * Gets the image data of a specific pixel by its location on Diva's image (row, col)
+	         * The challenge with this is that we don't have access to the full diva image, only the visible tiles
+	         * The suggested temporary solution is to force loading a non visible tile by going to its location
+	         * @param row
+	         * @param col
+	         * @param pageIndex
+	         * @param renderer
+	         * @param imageCanvas
+	         * @param drawingCanvas
+	         * @param progressCanvas
+	         */
+
 	    }, {
 	        key: 'drawImageDataOnCanvas',
 	        value: function drawImageDataOnCanvas(row, col, pageIndex, renderer, imageCanvas, drawingCanvas, progressCanvas) {
@@ -2635,6 +2786,20 @@
 	            progressCtx.fillStyle = colour.toHTMLColour();
 	            progressCtx.fillRect(col, row, 1, 1);
 	        }
+
+	        /**
+	         * 1. Updates the progress bar
+	         * 2. Creates image URLs to the images after they are successfully processed
+	         * 3. Handles export interruption
+	         * 4. Removes export page overlay
+	         * @param row
+	         * @param drawingCanvas
+	         * @param chunkNum
+	         * @param chunkSize
+	         * @param canvasToScan
+	         * @returns {{needsRecall: boolean}}
+	         */
+
 	    }, {
 	        key: 'postProcessImageDataIteration',
 	        value: function postProcessImageDataIteration(row, drawingCanvas, chunkNum, chunkSize, canvasToScan) {
@@ -2696,10 +2861,20 @@
 	                needsRecall: false
 	            };
 	        }
+
+	        /**
+	         * Scans the canvas and populates the matrix entries with the ID of the layer that spans the pixel corresponding
+	         * to the matrix entry
+	         * @param layer
+	         * @param matrix
+	         * @param canvasToScan
+	         * @param progressCanvas
+	         */
+
 	    }, {
 	        key: 'fillMatrix',
 	        value: function fillMatrix(layer, matrix, canvasToScan, progressCanvas) {
-	            var _this6 = this;
+	            var _this4 = this;
 
 	            var chunkSize = canvasToScan.width,
 	                chunkNum = 0,
@@ -2733,32 +2908,37 @@
 	                }
 
 	                // Finished exporting a layer
-	                if (index >= data.length || _this6.exportInterrupted) _this6.exportLayersCount -= 1;
+	                if (index >= data.length || _this4.exportInterrupted) _this4.exportLayersCount -= 1;
 
 	                // still didn't finish processing. Update progress and call function again
 	                else {
 	                        var percentage = index / data.length * 100,
 	                            roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
-	                        _this6.pixelInstance.uiManager.updateProgress(roundedPercentage);
+	                        _this4.pixelInstance.uiManager.updateProgress(roundedPercentage);
 
 	                        // Recall doChunk function
 	                        setTimeout(doChunk, 1);
 	                    }
 
 	                // End of Exporting
-	                if (_this6.exportLayersCount === 0) {
-	                    _this6.uiManager.destroyExportElements();
-	                    if (_this6.exportInterrupted) {
-	                        _this6.exportInterrupted = false;
+	                if (_this4.exportLayersCount === 0) {
+	                    _this4.uiManager.destroyExportElements();
+	                    if (_this4.exportInterrupted) {
+	                        _this4.exportInterrupted = false;
 	                    } else {
 	                        // this.pixelInstance.printMatrix();
-	                        _this6.transformMatrixToCSV();
+	                        _this4.transformMatrixToCSV();
 	                    }
 	                }
 	            };
 	            // First call to the doChunck function
 	            doChunk();
 	        }
+
+	        /**
+	         * Creates a matrix the size of the image
+	         */
+
 	    }, {
 	        key: 'initializeMatrix',
 	        value: function initializeMatrix() {
@@ -2809,7 +2989,7 @@
 	    }, {
 	        key: 'printMatrixOnCanvas',
 	        value: function printMatrixOnCanvas(canvas) {
-	            var _this7 = this;
+	            var _this5 = this;
 
 	            // Need to implement a buffering page
 	            // let renderer = this.core.getSettings().renderer;
@@ -2817,8 +2997,8 @@
 	                ctx = canvas.getContext('2d');
 
 	            var handleHit = function handleHit(row, col) {
-	                _this7.layers.forEach(function (layer) {
-	                    if (layer.layerId === _this7.matrix[row][col]) {
+	                _this5.layers.forEach(function (layer) {
+	                    if (layer.layerId === _this5.matrix[row][col]) {
 	                        ctx.fillStyle = layer.colour.toHTMLColour();
 	                        ctx.fillRect(col, row, 1, 1);
 	                    }
@@ -2839,21 +3019,22 @@
 	}();
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 	exports.UIManager = undefined;
 
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
-	var _point = __webpack_require__(2);
 
-	var _exceptions = __webpack_require__(11);
+	var _point = __webpack_require__(5);
+
+	var _exceptions = __webpack_require__(12);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2872,25 +3053,27 @@
 	    }
 
 	    _createClass(UIManager, [{
-	        key: 'createPluginElements',
+	        key: "createPluginElements",
 	        value: function createPluginElements(layers) {
 	            this.placeLayerCanvasesInDiva(layers);
 	            this.createUndoButton();
 	            this.createRedoButton();
 	            this.createDeleteLayerButton();
+	            this.createCreateLayerButton();
 	            this.createLayersView(layers);
 	            this.createToolsView(this.pixelInstance.tools.getAllTools());
 	            this.createExportButtons();
 	            this.createImportButtons();
 	        }
 	    }, {
-	        key: 'destroyPluginElements',
+	        key: "destroyPluginElements",
 	        value: function destroyPluginElements(layers, background) {
 	            this.destroyLayerSelectors(layers);
 	            this.destroyBrushSizeSelector();
 	            this.destroyUndoButton();
 	            this.destroyRedoButton();
 	            this.destroyDeleteLayerButton();
+	            this.destroyCreateLayerButton();
 	            this.destroyExportButtons();
 	            this.destroyImportButtons();
 	            this.destroyPixelCanvases(layers);
@@ -2904,7 +3087,7 @@
 	        // Tools are strings or enums
 
 	    }, {
-	        key: 'createToolsView',
+	        key: "createToolsView",
 	        value: function createToolsView(tools) {
 	            var _this = this;
 
@@ -2944,13 +3127,13 @@
 	            this.pixelInstance.tools.setCurrentTool(this.pixelInstance.tools.getCurrentTool());
 	        }
 	    }, {
-	        key: 'destroyToolsView',
+	        key: "destroyToolsView",
 	        value: function destroyToolsView() {
 	            var form = document.getElementById("tool-selector");
 	            form.parentNode.removeChild(form);
 	        }
 	    }, {
-	        key: 'placeLayerCanvasesInDiva',
+	        key: "placeLayerCanvasesInDiva",
 	        value: function placeLayerCanvasesInDiva(layers) {
 	            var divaCanvas = this.pixelInstance.core.getSettings().renderer._canvas;
 	            for (var index = layers.length - 1; index >= 0; index--) {
@@ -2963,14 +3146,14 @@
 	            if (this.pixelInstance.background.isActivated()) this.pixelInstance.background.getCanvas().style.opacity = this.pixelInstance.background.getLayerOpacity();else this.pixelInstance.background.getCanvas().style.opacity = 0;
 	        }
 	    }, {
-	        key: 'destroyPixelCanvases',
+	        key: "destroyPixelCanvases",
 	        value: function destroyPixelCanvases(layers) {
 	            layers.forEach(function (layer) {
-	                layer.getCanvas().parentNode.removeChild(layer.getCanvas());
+	                if (layer.getCanvas().parentNode !== null) layer.getCanvas().parentNode.removeChild(layer.getCanvas());
 	            });
 	        }
 	    }, {
-	        key: 'createOpacitySlider',
+	        key: "createOpacitySlider",
 	        value: function createOpacitySlider(layer, parentElement, referenceNode) {
 	            var br = document.createElement("br"),
 	                opacityDiv = document.createElement("div"),
@@ -3008,7 +3191,7 @@
 	            parentElement.insertBefore(br, referenceNode.nextSibling);
 	        }
 	    }, {
-	        key: 'destroyOpacitySlider',
+	        key: "destroyOpacitySlider",
 	        value: function destroyOpacitySlider(layer) {
 	            var opacitySlider = document.getElementById("layer-" + layer.layerId + "-opacity-tool"),
 	                br = document.getElementById("opacity-br-" + layer.layerId);
@@ -3016,10 +3199,8 @@
 	            br.parentElement.removeChild(br);
 	        }
 	    }, {
-	        key: 'createBackground',
+	        key: "createBackground",
 	        value: function createBackground() {
-	            var _this2 = this;
-
 	            var backgroundViewDiv = document.createElement("div");
 	            backgroundViewDiv.setAttribute("id", "background-view");
 	            backgroundViewDiv.setAttribute("class", "background-view");
@@ -3040,7 +3221,6 @@
 	            layerName.setAttribute("type", "text");
 	            layerName.setAttribute("readonly", "true");
 	            layerName.setAttribute("value", layer.layerName);
-	            //layerName.setAttribute("ondblclick", "this.readOnly='';");
 
 	            colourDiv.setAttribute("class", "color-box");
 	            colourDiv.setAttribute("style", "background-color: " + layer.colour.toHexString() + ";");
@@ -3048,19 +3228,24 @@
 	            layerOptionsDiv.setAttribute("class", "unchecked-layer-settings");
 	            layerOptionsDiv.setAttribute("id", "layer-" + layer.layerId + "-options");
 
-	            if (this.pixelInstance.background.isActivated()) layerActivationDiv.setAttribute("class", "layer-activated");else layerActivationDiv.setAttribute("class", "layer-deactivated");
+	            if (this.pixelInstance.background.isActivated()) {
+	                layerActivationDiv.setAttribute("class", "layer-activated");
+	                this.pixelInstance.background.getCanvas().style.opacity = 1;
+	            } else {
+	                layerActivationDiv.setAttribute("class", "layer-deactivated");
+	                this.pixelInstance.background.getCanvas().style.opacity = 0;
+	            }
 
 	            layerActivationDiv.setAttribute("id", "layer-" + layer.layerId + "-activation");
 
 	            colourDiv.addEventListener("click", function () {
-	                _this2.pixelInstance.displayColourOptions();
+	                layer.displayColourOptions();
 	            });
 	            layerActivationDiv.addEventListener("click", function () {
-	                _this2.pixelInstance.toggleLayerActivation(layer, layerActivationDiv);
+	                layer.toggleLayerActivation();
 	            });
-	            //layerName.addEventListener('keypress', (e) => { this.pixelInstance.editLayerName(e, layerName, layerDiv); });
 	            layerOptionsDiv.onclick = function () {
-	                _this2.pixelInstance.displayLayerOptions(layer, layerOptionsDiv);
+	                layer.displayLayerOptions();
 	            };
 
 	            layerDiv.appendChild(layerName);
@@ -3069,20 +3254,18 @@
 	            layerDiv.appendChild(layerActivationDiv);
 	            backgroundViewDiv.appendChild(layerDiv);
 
-	            this.pixelInstance.background.getCanvas().style.opacity = 1;
-
 	            document.body.appendChild(backgroundViewDiv);
 	        }
 	    }, {
-	        key: 'destroyLockedLayerSelectors',
+	        key: "destroyLockedLayerSelectors",
 	        value: function destroyLockedLayerSelectors() {
 	            var backgroundViewDiv = document.getElementById("background-view");
 	            backgroundViewDiv.parentNode.removeChild(backgroundViewDiv);
 	        }
 	    }, {
-	        key: 'createLayersView',
+	        key: "createLayersView",
 	        value: function createLayersView(layers) {
-	            var _this3 = this;
+	            var _this2 = this;
 
 	            var departureIndex = void 0,
 	                destinationIndex = void 0,
@@ -3094,36 +3277,36 @@
 
 	            var handleEvents = function handleEvents(layer, colourDiv, layerActivationDiv, layerName, layerOptionsDiv, layerDiv) {
 	                colourDiv.addEventListener("click", function () {
-	                    _this3.pixelInstance.displayColourOptions();
+	                    layer.displayColourOptions();
 	                });
 	                layerActivationDiv.addEventListener("click", function () {
-	                    _this3.pixelInstance.toggleLayerActivation(layer, layerActivationDiv);
+	                    layer.toggleLayerActivation();
 	                });
 	                layerName.addEventListener('keypress', function (e) {
-	                    _this3.pixelInstance.editLayerName(e, layerName, layerDiv, false, duringSwap, layer);
+	                    _this2.pixelInstance.editLayerName(e, layerName, layerDiv, false, duringSwap, layer);
 	                });
 	                layerOptionsDiv.onclick = function () {
-	                    _this3.pixelInstance.displayLayerOptions(layer, layerOptionsDiv);
+	                    layer.displayLayerOptions();
 	                };
 
 	                layerDiv.ondrag = function (evt) {
-	                    _this3.pixelInstance.dragging(evt);
+	                    _this2.pixelInstance.dragging(evt);
 	                    duringSwap = true;
 	                };
 	                layerDiv.ondragstart = function (evt) {
-	                    _this3.pixelInstance.dragStart(evt);
+	                    _this2.pixelInstance.dragStart(evt);
 	                };
 	                layerDiv.ondrop = function (evt) {
-	                    _this3.pixelInstance.drop(evt, departureIndex, destinationIndex);
+	                    _this2.pixelInstance.drop(evt, departureIndex, destinationIndex);
 	                    duringSwap = false;
 	                };
 	                layerDiv.onmousedown = function () {
 	                    departureIndex = layerDiv.getAttribute("index");
-	                    _this3.pixelInstance.highlightLayerSelector(layerDiv.getAttribute("value"));
+	                    _this2.highlightLayerSelectorById(layer.layerId);
 	                };
 
 	                layerDiv.ondragover = function (evt) {
-	                    _this3.pixelInstance.allowDrop(evt);
+	                    _this2.pixelInstance.allowDrop(evt);
 	                    destinationIndex = layerDiv.getAttribute("index");
 	                };
 	            };
@@ -3153,9 +3336,9 @@
 	                //sets draggable attribute to false on double click
 	                //only allows the onblur event after a double click
 	                layerName.addEventListener('dblclick', function (e) {
-	                    _this3.pixelInstance.editLayerName(e, layerName, layerDiv, false, duringSwap, layer);
+	                    _this2.pixelInstance.editLayerName(e, layerName, layerDiv, false, duringSwap, layer);
 	                    layerName.onblur = function (e) {
-	                        _this3.pixelInstance.editLayerName(e, layerName, layerDiv, true, duringSwap, layer);
+	                        _this2.pixelInstance.editLayerName(e, layerName, layerDiv, true, duringSwap, layer);
 	                    };
 	                });
 
@@ -3173,7 +3356,7 @@
 
 	                layerActivationDiv.setAttribute("id", "layer-" + layer.layerId + "-activation");
 
-	                if (layer.layerId === _this3.pixelInstance.layers[_this3.pixelInstance.selectedLayerIndex].layerId) {
+	                if (layer.layerId === _this2.pixelInstance.layers[_this2.pixelInstance.selectedLayerIndex].layerId) {
 	                    layerDiv.classList.add("selected-layer");
 	                }
 
@@ -3195,13 +3378,43 @@
 	            this.createBackground(layers);
 	        }
 	    }, {
-	        key: 'destroyLayerSelectors',
+	        key: "destroyLayerSelectors",
 	        value: function destroyLayerSelectors() {
 	            var layersViewDiv = document.getElementById("layers-view");
 	            layersViewDiv.parentNode.removeChild(layersViewDiv);
 	        }
 	    }, {
-	        key: 'createBrushSizeSelector',
+	        key: "highlightLayerSelectorById",
+	        value: function highlightLayerSelectorById(layerToHighlightId) {
+	            var _this3 = this;
+
+	            var matchFound = false;
+
+	            this.pixelInstance.layers.forEach(function (layer) {
+	                if (layer.layerId === layerToHighlightId) {
+	                    matchFound = true;
+	                }
+	            });
+
+	            if (!matchFound) {
+	                throw new _exceptions.CannotSelectLayerException("The layer you are trying to select does not exist.");
+	            }
+
+	            this.pixelInstance.layers.forEach(function (layer) {
+	                // Highlight only the selected layer and remove highlights from all other layers
+	                if (layer.layerId === layerToHighlightId) {
+	                    var div = document.getElementById("layer-" + layer.layerId + "-selector");
+
+	                    if (!div.hasAttribute("selected-layer")) div.classList.add("selected-layer");
+	                    _this3.pixelInstance.changeCurrentlySelectedLayerIndex(_this3.pixelInstance.layers.indexOf(layer));
+	                } else {
+	                    var _div = document.getElementById("layer-" + layer.layerId + "-selector");
+	                    if (_div.classList.contains("selected-layer")) _div.classList.remove("selected-layer");
+	                }
+	            });
+	        }
+	    }, {
+	        key: "createBrushSizeSelector",
 	        value: function createBrushSizeSelector() {
 	            var _this4 = this;
 
@@ -3227,13 +3440,13 @@
 	            document.body.appendChild(brushSizeDiv);
 	        }
 	    }, {
-	        key: 'destroyBrushSizeSelector',
+	        key: "destroyBrushSizeSelector",
 	        value: function destroyBrushSizeSelector() {
 	            var brushSizeDiv = document.getElementById("brush-size");
 	            if (brushSizeDiv !== null) brushSizeDiv.parentNode.removeChild(brushSizeDiv);
 	        }
 	    }, {
-	        key: 'createUndoButton',
+	        key: "createUndoButton",
 	        value: function createUndoButton() {
 	            var _this5 = this;
 
@@ -3251,13 +3464,13 @@
 	            document.body.appendChild(undoButton);
 	        }
 	    }, {
-	        key: 'destroyUndoButton',
+	        key: "destroyUndoButton",
 	        value: function destroyUndoButton() {
 	            var undoButton = document.getElementById("undo-button");
 	            undoButton.parentNode.removeChild(undoButton);
 	        }
 	    }, {
-	        key: 'createRedoButton',
+	        key: "createRedoButton",
 	        value: function createRedoButton() {
 	            var _this6 = this;
 
@@ -3275,13 +3488,13 @@
 	            document.body.appendChild(redoButton);
 	        }
 	    }, {
-	        key: 'destroyRedoButton',
+	        key: "destroyRedoButton",
 	        value: function destroyRedoButton() {
 	            var redoButton = document.getElementById("redo-button");
 	            redoButton.parentNode.removeChild(redoButton);
 	        }
 	    }, {
-	        key: 'createDeleteLayerButton',
+	        key: "createDeleteLayerButton",
 	        value: function createDeleteLayerButton() {
 	            var _this7 = this;
 
@@ -3305,46 +3518,56 @@
 	            document.body.appendChild(deleteLayerButton);
 	        }
 	    }, {
-	        key: 'destroyDeleteLayerButton',
+	        key: "destroyDeleteLayerButton",
 	        value: function destroyDeleteLayerButton() {
 	            var deleteLayerButton = document.getElementById("delete-layer-button");
 	            deleteLayerButton.parentNode.removeChild(deleteLayerButton);
 	        }
 	    }, {
-	        key: 'createExportButtons',
-	        value: function createExportButtons() {
+	        key: "createCreateLayerButton",
+	        value: function createCreateLayerButton() {
 	            var _this8 = this;
 
-	            var createBackgroundButton = document.createElement("button"),
-	                createBackgroundText = document.createTextNode("Generate Background Layer"),
-	                csvExportButton = document.createElement("button"),
+	            var createLayerButton = document.createElement("button"),
+	                text = document.createTextNode("Create new layer");
+
+	            this.createLayer = function () {
+	                _this8.pixelInstance.createLayer();
+	            };
+
+	            createLayerButton.setAttribute("id", "create-layer-button");
+	            createLayerButton.appendChild(text);
+	            createLayerButton.addEventListener("click", this.createLayer);
+
+	            document.body.appendChild(createLayerButton);
+	        }
+	    }, {
+	        key: "destroyCreateLayerButton",
+	        value: function destroyCreateLayerButton() {
+	            var createLayerButton = document.getElementById("create-layer-button");
+	            createLayerButton.parentNode.removeChild(createLayerButton);
+	        }
+	    }, {
+	        key: "createExportButtons",
+	        value: function createExportButtons() {
+	            var _this9 = this;
+
+	            var csvExportButton = document.createElement("button"),
 	                csvExportText = document.createTextNode("Export as CSV"),
 	                pngExportButton = document.createElement("button"),
-	                pngExportText = document.createTextNode("Export as highlights PNG"),
-	                rodanExportButton = document.createElement("button"),
-	                rodanExportText = document.createTextNode("Submit To Rodan"),
+	                pngExportText = document.createTextNode("Export as PNG"),
 	                pngDataExportButton = document.createElement("button"),
 	                pngDataExportText = document.createTextNode("Export as image Data PNG");
 
-	            this.createBackgroundLayer = function () {
-	                _this8.pixelInstance.createBackgroundLayer();
-	            };
 	            this.exportCSV = function () {
-	                _this8.pixelInstance.exportAsCSV();
+	                _this9.pixelInstance.exportAsCSV();
 	            };
 	            this.exportPNG = function () {
-	                _this8.pixelInstance.exportAsHighlights();
-	            };
-	            this.exportToRodan = function () {
-	                _this8.pixelInstance.exportToRodan();
+	                _this9.pixelInstance.exportAsPNG();
 	            };
 	            this.exportPNGData = function () {
-	                _this8.pixelInstance.exportAsImageData();
+	                _this9.pixelInstance.exportAsImageData();
 	            };
-
-	            createBackgroundButton.setAttribute("id", "create-background-button");
-	            createBackgroundButton.appendChild(createBackgroundText);
-	            createBackgroundButton.addEventListener("click", this.createBackgroundLayer);
 
 	            csvExportButton.setAttribute("id", "csv-export-button");
 	            csvExportButton.appendChild(csvExportText);
@@ -3354,22 +3577,16 @@
 	            pngExportButton.appendChild(pngExportText);
 	            pngExportButton.addEventListener("click", this.exportPNG);
 
-	            rodanExportButton.setAttribute("id", "rodan-export-button");
-	            rodanExportButton.appendChild(rodanExportText);
-	            rodanExportButton.addEventListener("click", this.exportToRodan);
-
 	            pngDataExportButton.setAttribute("id", "png-export-data-button");
 	            pngDataExportButton.appendChild(pngDataExportText);
 	            pngDataExportButton.addEventListener("click", this.exportPNGData);
 
-	            document.body.appendChild(createBackgroundButton);
 	            document.body.appendChild(csvExportButton);
 	            document.body.appendChild(pngExportButton);
-	            document.body.appendChild(rodanExportButton);
 	            document.body.appendChild(pngDataExportButton);
 	        }
 	    }, {
-	        key: 'destroyExportButtons',
+	        key: "destroyExportButtons",
 	        value: function destroyExportButtons() {
 	            var csvexportButton = document.getElementById("csv-export-button"),
 	                pngexportButton = document.getElementById("png-export-button"),
@@ -3380,9 +3597,9 @@
 	            pngexportDataButton.parentNode.removeChild(pngexportDataButton);
 	        }
 	    }, {
-	        key: 'createImportButtons',
+	        key: "createImportButtons",
 	        value: function createImportButtons() {
-	            var _this9 = this;
+	            var _this10 = this;
 
 	            var imageLoader = document.createElement("input");
 	            imageLoader.setAttribute("type", "file");
@@ -3390,7 +3607,7 @@
 	            imageLoader.setAttribute("name", "imageLoader");
 
 	            this.import = function (e) {
-	                _this9.pixelInstance.importPNGToLayer(e);
+	                _this10.pixelInstance.importPNGToLayer(e);
 	            };
 
 	            imageLoader.addEventListener('change', this.import, false);
@@ -3398,13 +3615,13 @@
 	            document.body.appendChild(imageLoader);
 	        }
 	    }, {
-	        key: 'destroyImportButtons',
+	        key: "destroyImportButtons",
 	        value: function destroyImportButtons() {
 	            var imageLoader = document.getElementById("imageLoader");
 	            imageLoader.parentNode.removeChild(imageLoader);
 	        }
 	    }, {
-	        key: 'updateProgress',
+	        key: "updateProgress",
 	        value: function updateProgress(percentage) {
 	            var percentageStr = percentage + "%",
 	                widthStr = "width: " + percentageStr;
@@ -3413,15 +3630,15 @@
 	            document.getElementById("pbar-inner-text").innerHTML = percentageStr;
 	        }
 	    }, {
-	        key: 'destroyBackground',
+	        key: "destroyBackground",
 	        value: function destroyBackground(layers) {
 	            this.pixelInstance.destroyLockedLayerSelectors(layers);
 	        }
 	    }, {
-	        key: 'createExportElements',
+	        key: "createExportElements",
 	        value: function createExportElements(exportInstance) {
 	            var exportDiv = document.createElement('div'),
-	                text = document.createTextNode("Generating"),
+	                text = document.createTextNode("Exporting"),
 	                progressText = document.createTextNode("0%"),
 	                progressBarOuterDiv = document.createElement('div'),
 	                progressBarInnerDiv = document.createElement('div'),
@@ -3468,13 +3685,13 @@
 	            };
 	        }
 	    }, {
-	        key: 'destroyExportElements',
+	        key: "destroyExportElements",
 	        value: function destroyExportElements() {
 	            var exportDiv = document.getElementById("pixel-export-div");
 	            exportDiv.parentNode.removeChild(exportDiv);
 	        }
 	    }, {
-	        key: 'destroyDownloadLinks',
+	        key: "destroyDownloadLinks",
 	        value: function destroyDownloadLinks() {
 	            var downloadElements = document.getElementsByClassName("export-download");
 
@@ -3483,7 +3700,7 @@
 	            }
 	        }
 	    }, {
-	        key: 'createProgressCanvas',
+	        key: "createProgressCanvas",
 	        value: function createProgressCanvas(pageIndex, zoomLevel) {
 	            var height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, zoomLevel).height,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, zoomLevel).width;
@@ -3509,12 +3726,12 @@
 	            return progressCanvas;
 	        }
 	    }, {
-	        key: 'markToolSelected',
+	        key: "markToolSelected",
 	        value: function markToolSelected(tool) {
 	            document.getElementById(tool).checked = true;
 	        }
 	    }, {
-	        key: 'getBrushSizeSelectorValue',
+	        key: "getBrushSizeSelectorValue",
 	        value: function getBrushSizeSelectorValue() {
 	            // Brush size relative to scaleRatio to allow for more precise manipulations on higher zoom levels
 	            var brushSizeSlider = document.getElementById("brush-size-selector"),
@@ -3523,7 +3740,7 @@
 	            return 0.05 + Math.exp(brushSizeValue - 6); // 0.05 + e ^ (x - 6) was the most intuitive function we found in terms of brush size range
 	        }
 	    }, {
-	        key: 'createBrushCursor',
+	        key: "createBrushCursor",
 	        value: function createBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div"),
 	                divaViewport = document.getElementById("diva-1-viewport"),
@@ -3539,7 +3756,7 @@
 	            this.resizeBrushCursor();
 	        }
 	    }, {
-	        key: 'resizeBrushCursor',
+	        key: "resizeBrushCursor",
 	        value: function resizeBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div");
 
@@ -3552,7 +3769,7 @@
 	            cursorDiv.style.height = brushSizeSelectorValue + "px";
 	        }
 	    }, {
-	        key: 'destroyBrushCursor',
+	        key: "destroyBrushCursor",
 	        value: function destroyBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div");
 
@@ -3561,7 +3778,7 @@
 	            }
 	        }
 	    }, {
-	        key: 'moveBrushCursor',
+	        key: "moveBrushCursor",
 	        value: function moveBrushCursor(mousePos) {
 	            var cursorDiv = document.getElementById("brush-cursor-div"),
 	                scaleRatio = Math.pow(2, this.pixelInstance.core.getSettings().zoomLevel),
@@ -3571,13 +3788,13 @@
 	            cursorDiv.style.top = mousePos.y - brushSize / 2 - 1 + "px"; // the -1 is to account for the border width
 	        }
 	    }, {
-	        key: 'restoreDefaultCursor',
+	        key: "restoreDefaultCursor",
 	        value: function restoreDefaultCursor() {
 	            var mouseClickDiv = document.getElementById("diva-1-outer");
 	            mouseClickDiv.style.cursor = "default";
 	        }
 	    }, {
-	        key: 'setMousePosition',
+	        key: "setMousePosition",
 	        value: function setMousePosition(mousePos) {
 	            // Rectangle border width
 	            var borderWidth = 1;
@@ -3586,7 +3803,7 @@
 	            this.mouse.y = mousePos.y - borderWidth;
 	        }
 	    }, {
-	        key: 'createRectanglePreview',
+	        key: "createRectanglePreview",
 	        value: function createRectanglePreview(mousePos, layer) {
 	            this.setMousePosition(mousePos);
 
@@ -3605,7 +3822,7 @@
 	            divaOuter.insertBefore(element, divaViewport);
 	        }
 	    }, {
-	        key: 'resizeRectanglePreview',
+	        key: "resizeRectanglePreview",
 	        value: function resizeRectanglePreview(mousePos, layer) {
 	            this.setMousePosition(mousePos);
 	            var element = document.getElementById("preview-rectangle");
@@ -3619,13 +3836,13 @@
 	            }
 	        }
 	    }, {
-	        key: 'removeRectanglePreview',
+	        key: "removeRectanglePreview",
 	        value: function removeRectanglePreview() {
 	            var element = document.getElementById("preview-rectangle");
 	            if (element !== null) element.parentNode.removeChild(element);
 	        }
 	    }, {
-	        key: 'isInPageBounds',
+	        key: "isInPageBounds",
 	        value: function isInPageBounds(relativeX, relativeY) {
 	            var pageIndex = this.pixelInstance.core.getSettings().currentPageIndex,
 	                zoomLevel = this.pixelInstance.core.getSettings().zoomLevel,
@@ -3642,13 +3859,115 @@
 
 	            return true;
 	        }
+
+	        /**
+	         * ===============================================
+	         *                     Tutorial
+	         * ===============================================
+	         **/
+
+	    }, {
+	        key: "tutorial",
+	        value: function tutorial() {
+	            var overlay = document.createElement('div');
+	            overlay.setAttribute("id", "tutorial-div");
+
+	            var background = document.createElement('div');
+	            background.setAttribute("id", "tutorial-overlay");
+
+	            var modal = document.createElement('div');
+	            modal.setAttribute("id", "myModal");
+	            modal.setAttribute("class", "modal");
+
+	            var modalContent = document.createElement('div');
+	            modalContent.setAttribute("class", "modal-content");
+
+	            var modalHeader = document.createElement('div');
+	            modalHeader.setAttribute("class", "modal-header");
+
+	            var text = document.createTextNode("Hello, World");
+	            var h2 = document.createElement('h2');
+	            h2.appendChild(text);
+
+	            var closeModal = document.createElement('span');
+	            closeModal.setAttribute("class", "close");
+	            closeModal.innerHTML = "&times;";
+
+	            var modalBody = document.createElement('div');
+	            modalBody.setAttribute("class", "modal-body");
+
+	            var tutorialP = document.createElement('p');
+	            tutorialP.innerHTML = "The following is a glossary of the hotkeys you will find useful when using Pixel.js";
+
+	            var hotkeyGlossary = document.createElement('ul');
+	            hotkeyGlossary.setAttribute("style", "list-style-type:none;");
+
+	            var LayerSelect = document.createElement('li');
+	            LayerSelect.innerHTML = "<kbd>1</kbd> ... <kbd>9</kbd> layer select";
+
+	            var brushTool = document.createElement('li');
+	            brushTool.innerHTML = "<kbd>b</kbd> brush tool";
+
+	            var rectangleTool = document.createElement('li');
+	            rectangleTool.innerHTML = "<kbd>r</kbd> rectangle tool";
+
+	            var grabTool = document.createElement('li');
+	            grabTool.innerHTML = "<kbd>g</kbd> grab tool";
+
+	            var eraserTool = document.createElement('li');
+	            eraserTool.innerHTML = "<kbd>e</kbd> eraser tool";
+
+	            var shift = document.createElement('li');
+	            shift.innerHTML = "<kbd>Shift</kbd>  force tools to paint in an exact way.";
+
+	            var undo = document.createElement('li');
+	            undo.innerHTML = "<kbd>cmd</kbd> + <kbd>z</kbd> undo";
+
+	            var redo = document.createElement('li');
+	            redo.innerHTML = "<kbd>cmd</kbd> + <kbd>Shift</kbd> + <kbd>z</kbd> redo";
+
+	            var modalFooter = document.createElement('div');
+	            modalFooter.setAttribute("class", "modal-footer");
+
+	            var close = document.createElement('h2');
+	            close.innerHTML = "Got It!";
+
+	            hotkeyGlossary.appendChild(LayerSelect);
+	            hotkeyGlossary.appendChild(brushTool);
+	            hotkeyGlossary.appendChild(rectangleTool);
+	            hotkeyGlossary.appendChild(grabTool);
+	            hotkeyGlossary.appendChild(eraserTool);
+	            hotkeyGlossary.appendChild(shift);
+	            hotkeyGlossary.appendChild(undo);
+	            hotkeyGlossary.appendChild(redo);
+
+	            modal.appendChild(modalContent);
+	            modalContent.appendChild(modalHeader);
+	            modalContent.appendChild(modalBody);
+	            modalContent.appendChild(modalFooter);
+	            modalHeader.appendChild(h2);
+	            modalHeader.appendChild(closeModal);
+	            modalBody.appendChild(tutorialP);
+	            modalBody.appendChild(hotkeyGlossary);
+	            modalFooter.appendChild(close);
+
+	            overlay.appendChild(background);
+	            overlay.appendChild(modal);
+	            document.body.appendChild(overlay);
+
+	            modal.style.display = "block";
+
+	            modalFooter.addEventListener("click", function () {
+	                overlay.parentNode.removeChild(overlay);
+	            });
+	        }
 	    }]);
 
 	    return UIManager;
 	}();
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -3663,6 +3982,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
 	var PixelException = function PixelException(message) {
 	    _classCallCheck(this, PixelException);
 
@@ -3681,8 +4001,20 @@
 	    return CannotDeleteLayerException;
 	}(PixelException);
 
+	var CannotSelectLayerException = exports.CannotSelectLayerException = function (_PixelException2) {
+	    _inherits(CannotSelectLayerException, _PixelException2);
+
+	    function CannotSelectLayerException() {
+	        _classCallCheck(this, CannotSelectLayerException);
+
+	        return _possibleConstructorReturn(this, (CannotSelectLayerException.__proto__ || Object.getPrototypeOf(CannotSelectLayerException)).apply(this, arguments));
+	    }
+
+	    return CannotSelectLayerException;
+	}(PixelException);
+
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -3695,6 +4027,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
 	var Tools = exports.Tools = function () {
 	    function Tools(pixelInstance) {
 	        _classCallCheck(this, Tools);
@@ -3704,7 +4037,7 @@
 	            brush: "brush",
 	            rectangle: "rectangle",
 	            grab: "grab",
-	            eraser: "eraser",
+	            erase: "erase",
 	            select: "select"
 	        };
 	        this.currentTool = this.type.brush;
@@ -3731,7 +4064,7 @@
 	                case this.type.brush:
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
-	                case this.type.eraser:
+	                case this.type.erase:
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
 	                default:
@@ -3763,7 +4096,7 @@
 	                    this.pixelInstance.uiManager.createBrushCursor();
 	                    mouseClickDiv.style.cursor = "none";
 	                    break;
-	                case this.type.eraser:
+	                case this.type.erase:
 	                    slider.style.visibility = "visible";
 	                    this.pixelInstance.uiManager.createBrushCursor();
 	                    mouseClickDiv.style.cursor = "none";
@@ -3787,23 +4120,20 @@
 	}();
 
 /***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
+/* 14 */
+/***/ (function(module, exports) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.Import = undefined;
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _colour = __webpack_require__(5);
-
-	var _point = __webpack_require__(2);
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
 
 	var Import = exports.Import = function () {
 	    function Import(pixelInstance, layers, pageIndex, zoomLevel, uiManager) {
@@ -3818,79 +4148,67 @@
 	        this.uiManager = uiManager;
 	    }
 
+	    /**
+	     * Allows a user to upload an image from their local machine to a layer as its background image.
+	     * @param layer
+	     * @param e
+	     */
+
+
 	    _createClass(Import, [{
-	        key: 'rodanImagesToCanvas',
-	        value: function rodanImagesToCanvas() {
+	        key: "uploadLocalImageToLayer",
+	        value: function uploadLocalImageToLayer(layer, e) {
 	            var _this = this;
 
-	            this.layers.forEach(function (layer) {
-	                // Current implementation only supports 3 layers
-	                var img = document.getElementById("layer" + layer.layerId + "-img");
-	                if (img !== null) {
-	                    var imageCanvas = document.createElement("canvas");
-	                    imageCanvas.width = layer.getCanvas().width;
-	                    imageCanvas.height = layer.getCanvas().height;
-	                    var ctx = imageCanvas.getContext("2d");
+	            var reader = new FileReader();
 
-	                    ctx.drawImage(img, 0, 0);
+	            reader.onload = function (event) {
+	                _this.importFromImageURLToLayer(layer, event.target.result);
+	            };
 
-	                    var imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
-	                        data = imageData.data;
-
-	                    for (var i = 0; i < data.length; i += 4) {
-	                        data[i] = layer.colour.red; // red
-	                        data[i + 1] = layer.colour.green; // green
-	                        data[i + 2] = layer.colour.blue; // blue
-	                    }
-	                    // overwrite original image
-	                    ctx.putImageData(imageData, 0, 0);
-
-	                    layer.setPreBinarizedImageCanvas(imageCanvas);
-	                    layer.drawLayer(_this.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
-	                }
-	            });
+	            reader.readAsDataURL(e.target.files[0]);
 	        }
 
 	        /**
-	         * Creates a PNG for each layer where the pixels spanned by the layers are replaced by the actual image data
-	         * of the Diva page
+	         * Imports an image from a url to canvas and converts the RGB values of the image to the layer's RGB colours
+	         * Transparent pixels will stay transparent
+	         * @param layer
+	         * @param url: Data URLs are fully supported but file urls can cause the canvas to be "tainted" according to CORS
+	         * specifications since it comes from a different origin
 	         */
 
 	    }, {
-	        key: 'uploadLayerPNGToCanvas',
-	        value: function uploadLayerPNGToCanvas(layer, e) {
+	        key: "importFromImageURLToLayer",
+	        value: function importFromImageURLToLayer(layer, url) {
 	            var _this2 = this;
 
 	            var imageCanvas = document.createElement("canvas");
 	            imageCanvas.width = layer.getCanvas().width;
 	            imageCanvas.height = layer.getCanvas().height;
 
-	            var ctx = imageCanvas.getContext("2d"),
-	                reader = new FileReader();
+	            var ctx = imageCanvas.getContext("2d");
+	            var img = new Image();
+	            img.src = url;
 
-	            reader.onload = function (event) {
-	                var img = new Image();
-	                img.onload = function () {
-	                    ctx.drawImage(img, 0, 0);
+	            img.onload = function () {
+	                ctx.drawImage(img, 0, 0);
 
-	                    var imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
-	                        data = imageData.data;
+	                var imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
+	                    data = imageData.data;
 
-	                    for (var i = 0; i < data.length; i += 4) {
-	                        data[i] = layer.colour.red; // red
-	                        data[i + 1] = layer.colour.green; // green
-	                        data[i + 2] = layer.colour.blue; // blue
-	                    }
-	                    // overwrite original image
-	                    ctx.putImageData(imageData, 0, 0);
+	                // Convert the colour of the image to the layer's colour
+	                for (var i = 0; i < data.length; i += 4) {
+	                    data[i] = layer.colour.red; // red
+	                    data[i + 1] = layer.colour.green; // green
+	                    data[i + 2] = layer.colour.blue; // blue
+	                }
+	                // overwrite original image
+	                ctx.putImageData(imageData, 0, 0);
 
-	                    layer.setPreBinarizedImageCanvas(imageCanvas);
-	                    layer.drawLayer(_this2.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
-	                };
-	                img.src = event.target.result;
+	                // Set this as the background image of the canvas
+	                layer.setBackgroundImageCanvas(imageCanvas);
+	                layer.drawLayer(_this2.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
 	            };
-
-	            reader.readAsDataURL(e.target.files[0]);
 	        }
 	    }]);
 
@@ -3898,7 +4216,7 @@
 	}();
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -3911,6 +4229,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+	/*jshint esversion: 6 */
 	var Selection = exports.Selection = function () {
 	    function Selection() {
 	        _classCallCheck(this, Selection);
@@ -4030,6 +4349,230 @@
 	    }]);
 
 	    return Selection;
+	}();
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/**
+	 * Created by zeyadsaleh on 2017-08-14.
+	 */
+	var Tutorial = exports.Tutorial = function () {
+	    function Tutorial(pixelInstance) {
+	        _classCallCheck(this, Tutorial);
+
+	        this.pixelInstance = pixelInstance;
+	        this.currentTutorialPageIndex = 0;
+	        this.modalContent = document.createElement('div');
+	        this.createTutorial();
+	    }
+
+	    _createClass(Tutorial, [{
+	        key: 'createTutorial',
+	        value: function createTutorial() {
+	            var overlay = document.createElement('div');
+	            overlay.setAttribute("id", "tutorial-div");
+
+	            var background = document.createElement('div');
+	            background.setAttribute("id", "tutorial-overlay");
+
+	            var modal = document.createElement('div');
+	            modal.setAttribute("id", "myModal");
+	            modal.setAttribute("class", "modal");
+
+	            this.modalContent.setAttribute("class", "modal-content");
+
+	            var modalHeader = document.createElement('div');
+	            modalHeader.setAttribute("class", "modal-header");
+
+	            var text = document.createTextNode("Tutorial");
+	            var h2 = document.createElement('h2');
+	            h2.appendChild(text);
+
+	            var closeModal = document.createElement('span');
+	            closeModal.setAttribute("class", "close");
+	            closeModal.innerHTML = "&times;";
+
+	            var modalBody = this.getModalBody(this.currentTutorialPageIndex);
+
+	            var modalFooter = document.createElement('div');
+	            modalFooter.setAttribute("class", "modal-footer");
+	            modalFooter.setAttribute("id", "modal-footer");
+
+	            var close = document.createElement('h2');
+	            close.innerHTML = "Got It!";
+
+	            modal.appendChild(this.modalContent);
+	            this.modalContent.appendChild(modalHeader);
+	            this.modalContent.appendChild(modalBody);
+	            this.modalContent.appendChild(modalFooter);
+	            modalHeader.appendChild(h2);
+	            modalHeader.appendChild(closeModal);
+	            modalFooter.appendChild(close);
+
+	            overlay.appendChild(background);
+	            overlay.appendChild(modal);
+	            document.body.appendChild(overlay);
+
+	            modal.style.display = "block";
+
+	            modalFooter.addEventListener("click", function () {
+	                overlay.parentNode.removeChild(overlay);
+	            });
+	        }
+	    }, {
+	        key: 'getModalBody',
+	        value: function getModalBody(tutorialPageIndex) {
+	            var _this = this;
+
+	            var modalBody = document.createElement('div');
+	            modalBody.setAttribute("class", "modal-body");
+	            modalBody.setAttribute("id", "modal-body");
+
+	            var tutorialP = document.createElement('p');
+	            var img = new Image();
+	            img.className = "tutorial-image";
+	            var next = document.createElement("button");
+	            next.innerHTML = "Next";
+	            var previous = document.createElement("button");
+	            previous.innerHTML = "Previous";
+	            var progress = document.createElement('p');
+	            progress.setAttribute("id", "tutorial-progress");
+	            progress.innerHTML = tutorialPageIndex + 1 + "/16";
+
+	            next.addEventListener("click", function () {
+	                _this.currentTutorialPageIndex++;
+	                _this.getTutorialPage(_this.currentTutorialPageIndex);
+	            });
+	            previous.addEventListener("click", function () {
+	                _this.currentTutorialPageIndex--;
+	                _this.getTutorialPage(_this.currentTutorialPageIndex);
+	            });
+
+	            switch (tutorialPageIndex) {
+	                case 0:
+	                    tutorialP.innerHTML = "Navigate to the page you would like to edit and click the Pixel.js icon to open the toolboxes and layers view.";
+	                    img.src = "https://media.giphy.com/media/aL9oQ0f1sDIpq/giphy.gif";
+	                    break;
+	                case 1:
+	                    tutorialP.innerHTML = "Each layer has its own specific colour and represents a classification category. Create as many layers as needed. <br> A collection of keyboard shortcuts have been implemented. Each layer can be selected by its number (from <kbd>1</kbd> to <kbd>9</kbd>). Hover over the layers to receive a prompt.";
+	                    img.src = "https://media.giphy.com/media/rBiuWy5YUsIow/giphy.gif";
+	                    break;
+	                case 2:
+	                    tutorialP.innerHTML = "You can upload images to the currently selected layer. The image will be converted to the specified layer's colour. <br> In this example, we have uploaded the output images of a classification method in order to correct it.";
+	                    img.src = "https://media.giphy.com/media/Qy4u6oHru8OpG/giphy.gif";
+	                    break;
+	                case 3:
+	                    tutorialP.innerHTML = "Double click on the layer's name to rename it.";
+	                    img.src = "https://media.giphy.com/media/LRxzQa1ogqKAw/giphy.gif";
+	                    break;
+	                case 4:
+	                    tutorialP.innerHTML = "Use zoom along with the grab tool <kbd>g</kbd> to navigate a page.";
+	                    img.src = "https://media.giphy.com/media/hcLjZ9dFHOKDm/giphy.gif";
+	                    break;
+	                case 5:
+	                    tutorialP.innerHTML = "Use the select tool <kbd>s</kbd> to copy <kbd>Ctrl</kbd> + <kbd>c</kbd> or cut <kbd>Ctrl</kbd> + <kbd>x</kbd> and paste <kbd>Ctrl</kbd> + <kbd>v</kbd> rectangular regions of pixels from one layer to another.";
+	                    img.src = "https://media.giphy.com/media/ruMD98axGjdyE/giphy.gif";
+	                    break;
+	                case 6:
+	                    tutorialP.innerHTML = "Right-click and drag right and left on the erase <kbd>e</kbd> and brush <kbd>b</kbd> tools to change the brush size.";
+	                    img.src = "https://media.giphy.com/media/NhvALG9MhGYta/giphy.gif";
+	                    break;
+	                case 7:
+	                    tutorialP.innerHTML = "Press <kbd>Shift</kbd> and drag on the erase <kbd>e</kbd> and brush <kbd>b</kbd> tools to draw straight lines.";
+	                    img.src = "https://media.giphy.com/media/t74TeR1gd9aaA/giphy.gif";
+	                    break;
+	                case 8:
+	                    tutorialP.innerHTML = "Right-click and drag on rectangle tool <kbd>r</kbd> to erase rectangular regions, left-click to draw rectangle. Press <kbd>Shift</kbd> to draw squares.";
+	                    img.src = "https://media.giphy.com/media/i497rUNYB8t32/giphy.gif";
+	                    break;
+	                case 9:
+	                    tutorialP.innerHTML = "Use the Fullscreen mode <kbd>f</kbd> and the browser zoom to get more precision, when needed. <br> To exit Fullscreen mode, press on <kbd>f</kbd> again.";
+	                    img.src = "https://media.giphy.com/media/FkzOAenUJxfGg/giphy.gif";
+	                    break;
+	                case 10:
+	                    tutorialP.innerHTML = "You can bring a layer forward/backward by clicking and dragging them to their desired position.";
+	                    img.src = "https://media.giphy.com/media/DImPhyGZ3OltC/giphy.gif";
+	                    break;
+	                case 11:
+	                    tutorialP.innerHTML = "You can undo <kbd>Ctrl</kbd> + <kbd>z</kbd> and redo <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>z</kbd> an action.";
+	                    img.src = "https://media.giphy.com/media/24kHpWLzbHFrq/giphy.gif";
+	                    break;
+	                case 12:
+	                    tutorialP.innerHTML = "You can delete a layer by selecting it and then using <kbd>Ctrl</kbd> + <kbd>del</kbd>.";
+	                    img.src = "https://media.giphy.com/media/cmQesBkeEvdmM/giphy.gif";
+	                    break;
+	                case 13:
+	                    tutorialP.innerHTML = "You can mute (press <kbd>m</kbd> to toggle on/off) or hide (hold <kbd>h</kbd> to turn off, release to turn on) layers.";
+	                    img.src = "https://media.giphy.com/media/BhVXr7ONVdStq/giphy.gif";
+	                    break;
+	                case 14:
+	                    tutorialP.innerHTML = "Change the opacity of a layer by displaying the layer options.";
+	                    img.src = "https://media.giphy.com/media/94EtnDoG2yNAQ/giphy.gif";
+	                    break;
+	                case 15:
+	                    tutorialP.innerHTML = "Export layers as PNGs to save a specific layer as an image. See the " + '<a href="https://github.com/DDMAL/Pixel.js/wiki">wiki</a>' + " for details on the different export buttons and more information.";
+	                    img.src = "https://media.giphy.com/media/kBAau6Gebio7e/giphy.gif";
+	                    break;
+
+	                // let hotkeyGlossary = document.createElement('ul');
+	                // hotkeyGlossary.setAttribute("style", "list-style-type:none;");
+	                //
+	                // let LayerSelect = document.createElement('li');
+	                // LayerSelect.innerHTML = "<kbd>1</kbd> ... <kbd>9</kbd> layer select";
+	                //
+	                // let brushTool = document.createElement('li');
+	                // brushTool.innerHTML = "<kbd>b</kbd> brush tool";
+	                //
+	                // let rectangleTool = document.createElement('li');
+	                // rectangleTool.innerHTML = "<kbd>r</kbd> rectangle tool";
+	                //
+	                // let grabTool = document.createElement('li');
+	                // grabTool.innerHTML = "<kbd>g</kbd> grab tool";
+	                //
+	                // let eraserTool = document.createElement('li');
+	                // eraserTool.innerHTML = "<kbd>e</kbd> eraser tool";
+	                //
+	                // let shift = document.createElement('li');
+	                // shift.innerHTML = "<kbd>Shift</kbd>  force tools to paint in an exact way.";
+	                //
+	                // let undo = document.createElement('li');
+	                // undo.innerHTML = "<kbd>cmd</kbd> + <kbd>z</kbd> undo";
+	                //
+	                // let redo = document.createElement('li');
+	                // redo.innerHTML = "<kbd>cmd</kbd> + <kbd>Shift</kbd> + <kbd>z</kbd> redo";
+	            }
+
+	            modalBody.appendChild(img);
+	            modalBody.appendChild(tutorialP);
+	            if (this.currentTutorialPageIndex !== 0) modalBody.appendChild(previous);
+	            if (this.currentTutorialPageIndex !== 15) modalBody.appendChild(next);
+	            modalBody.appendChild(progress);
+
+	            return modalBody;
+	        }
+	    }, {
+	        key: 'getTutorialPage',
+	        value: function getTutorialPage(pageIndex) {
+	            var modalBody = document.getElementById("modal-body");
+	            modalBody.parentElement.removeChild(modalBody);
+
+	            this.modalContent.insertBefore(this.getModalBody(pageIndex), document.getElementById("modal-footer"));
+	        }
+	    }]);
+
+	    return Tutorial;
 	}();
 
 /***/ })
