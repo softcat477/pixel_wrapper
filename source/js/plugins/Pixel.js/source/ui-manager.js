@@ -445,26 +445,16 @@ export class UIManager
 
     createExportButtons ()
     {
-        let createBackgroundButton = document.createElement("button"),
-            createBackgroundText = document.createTextNode("Generate Background Layer"),
-            csvExportButton = document.createElement("button"),
+        let csvExportButton = document.createElement("button"),
             csvExportText = document.createTextNode("Export as CSV"),
             pngExportButton = document.createElement("button"),
             pngExportText = document.createTextNode("Export as highlights PNG"),
-            rodanExportButton = document.createElement("button"),
-            rodanExportText = document.createTextNode("Submit To Rodan"),
             pngDataExportButton = document.createElement("button"),
             pngDataExportText = document.createTextNode("Export as image Data PNG");
 
-        this.createBackgroundLayer = () => { this.pixelInstance.createBackgroundLayer(); };
         this.exportCSV = () => { this.pixelInstance.exportAsCSV(); };
         this.exportPNG = () => { this.pixelInstance.exportAsHighlights(); };
-        this.exportToRodan = () => { this.pixelInstance.exportToRodan(); };
         this.exportPNGData = () => { this.pixelInstance.exportAsImageData(); };
-
-        createBackgroundButton.setAttribute("id", "create-background-button");
-        createBackgroundButton.appendChild(createBackgroundText);
-        createBackgroundButton.addEventListener("click", this.createBackgroundLayer);
 
         csvExportButton.setAttribute("id", "csv-export-button");
         csvExportButton.appendChild(csvExportText);
@@ -474,18 +464,12 @@ export class UIManager
         pngExportButton.appendChild(pngExportText);
         pngExportButton.addEventListener("click", this.exportPNG);
 
-        rodanExportButton.setAttribute("id", "rodan-export-button");
-        rodanExportButton.appendChild(rodanExportText);
-        rodanExportButton.addEventListener("click", this.exportToRodan);
-
         pngDataExportButton.setAttribute("id", "png-export-data-button");
         pngDataExportButton.appendChild(pngDataExportText);
         pngDataExportButton.addEventListener("click", this.exportPNGData);
 
-        document.body.appendChild(createBackgroundButton);
         document.body.appendChild(csvExportButton);
         document.body.appendChild(pngExportButton);
-        document.body.appendChild(rodanExportButton);
         document.body.appendChild(pngDataExportButton);
     }
 

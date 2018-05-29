@@ -17,7 +17,7 @@ import {Tools} from './tools';
 import {Import} from './import';
 import {Selection} from './selection';
 import {CannotDeleteLayerException} from "./exceptions";
-
+import {PixelWrapper} from '../../pixel-wrapper';
 
 export default class PixelPlugin
 {
@@ -44,6 +44,7 @@ export default class PixelPlugin
         this.uiManager = null;
         this.tools = null;
         this.selection = null;
+        this.pixelWrapper = null;
     }
 
     /**
@@ -100,6 +101,10 @@ export default class PixelPlugin
         new Import(this, this.layers, this.core.getSettings().currentPageIndex, this.core.getSettings().zoomLevel, this.uiManager).rodanImagesToCanvas();
 
         this.activated = true;
+
+        // Activate wrapper. 
+        this.pixelWrapper = new PixelWrapper(this);
+        this.pixelWrapper.activate();
     }
 
     deactivatePlugin ()
@@ -115,6 +120,9 @@ export default class PixelPlugin
 
         this.enableDragScrollable();
         this.activated = false;
+
+        // Deactivate wrapper
+        this.pixelWrapper.deactivate();
     }
 
     enableDragScrollable ()
@@ -1114,14 +1122,6 @@ export default class PixelPlugin
      *                    Export
      * ===============================================
      **/
-
-    createBackgroundLayer ()
-    {
-        let pageIndex = this.core.getSettings().currentPageIndex,
-            zoomLevel = this.core.getSettings().zoomLevel;
-
-        new Export(this, this.layers, pageIndex, zoomLevel, this.uiManager).createBackgroundLayer();
-    }
     
     // Will fill a canvas with the highlighted data and scan every pixel of that and fill another canvas with diva data
     // on the highlighted regions
