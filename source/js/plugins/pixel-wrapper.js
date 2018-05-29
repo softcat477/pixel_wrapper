@@ -14,11 +14,13 @@ export class PixelWrapper
         this.uiManager = pixelInstance.uiManager;
         this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
         this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
+        this.exportInterrupted = false;
     }
 
     activate ()
     {
         this.createButtons();
+        this.rodanImagesToCanvas();
     }
 
     deactivate ()
@@ -28,33 +30,33 @@ export class PixelWrapper
 
     createButtons () 
     {
-        let createBackgroundButton = document.createElement("button"),
-            createBackgroundText = document.createTextNode("Generate Background Layer"),
-            rodanExportButton = document.createElement("button"),
+        let rodanExportButton = document.createElement("button"),
             rodanExportText = document.createTextNode("Submit To Rodan");
 
-        this.createBackground = () => { this.createBackgroundLayer(); };
-        this.exportToRodan = () => { this.exportLayersToRodan(); };
-
-        createBackgroundButton.setAttribute("id", "create-background-button");
-        createBackgroundButton.appendChild(createBackgroundText);
-        createBackgroundButton.addEventListener("click", this.createBackground);
+        this.exportToRodan = () => { this.checkValid(); }; // This will call exportLayersToRodan when done
 
         rodanExportButton.setAttribute("id", "rodan-export-button");
         rodanExportButton.appendChild(rodanExportText);
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
-        document.body.appendChild(createBackgroundButton);
         document.body.appendChild(rodanExportButton);
     }
 
     destroyButtons ()
     {
-        let createBackgroundButton = document.getElementById("create-background-button"),
-            rodanExportButton = document.getElementById("rodan-export-button");
+        let rodanExportButton = document.getElementById("rodan-export-button");
 
-        createBackgroundButton.parentNode.removeChild(createBackgroundButton);
         rodanExportButton.parentNode.removeChild(rodanExportButton);
+    }
+
+    checkValid ()
+    {
+        if (this.layers.length !== 3) { 
+            window.alert("You need to have exactly 3 layers for classification!");
+        } else {
+            this.layersCount = this.layers.length;
+            this.createBackgroundLayer();
+        }
     }
 
     exportLayersToRodan ()
@@ -64,15 +66,17 @@ export class PixelWrapper
         let count = this.layers.length;
         let urlList = [];
 
-        // The idea here is to draw each layer on a canvas and scan the pixels of that canvas to fill the matrix
         this.layers.forEach((layer) => {
             
+            console.log(layer.layerId + " " + layer.layerName);
+
             let dataURL = layer.getCanvas().toDataURL();
             urlList[layer.layerId] = dataURL;
             count -= 1;
                 if (count === 0)
                 {
                     console.log(urlList);
+                    console.log(this.layers.length);
                     console.log("done");
 
                     $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
@@ -88,12 +92,6 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
-        // If generate background button has already been clicked, remove that background layer from layers
-        if (document.getElementById("create-background-button").value === "clicked") { 
-            this.layers.pop();
-            this.layersCount = this.layers.length;
-        }
-
         let backgroundLayer = new Layer(this.layersCount+1, new Colour(242, 0, 242, 1), "Background Layer", 
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
@@ -107,8 +105,7 @@ export class PixelWrapper
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
         // Instantiate progress bar
-        let exportInstance = new Export(this.pixelInstance, this.layers, this.pageIndex, this.zoomLevel, this.uiManager);
-        this.uiManager.createExportElements(exportInstance);
+        this.uiManager.createExportElements(this);
 
         this.layers.forEach((layer) => {
             // Create layer canvas and draw (so pixel data can be accessed)
@@ -179,13 +176,46 @@ export class PixelWrapper
             } else if (this.layersCount === 0) { // Done generating background layer
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.push(backgroundLayer);  
-                document.getElementById("create-background-button").innerText = "Background Generated!";
-                document.getElementById("create-background-button").value = "clicked";
                 this.uiManager.destroyExportElements();
+                this.exportLayersToRodan();
             }
         }
         return {
             needsRecall: false
         };
     }
+
+    rodanImagesToCanvas ()
+    {
+        this.layers.forEach((layer) =>
+        {
+            // Current implementation only supports 3 layers
+            let img = document.getElementById("layer" + layer.layerId +"-img");
+            if (img !== null)
+            {
+                let imageCanvas = document.createElement("canvas");
+                imageCanvas.width = layer.getCanvas().width;
+                imageCanvas.height = layer.getCanvas().height;
+                let ctx = imageCanvas.getContext("2d");
+
+                ctx.drawImage(img,0,0);
+
+                let imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
+                    data = imageData.data;
+
+                for(let i = 0; i < data.length; i += 4)
+                {
+                    data[i] = layer.colour.red;             // red
+                    data[i + 1] = layer.colour.green;       // green
+                    data[i + 2] = layer.colour.blue;        // blue
+                }
+                // overwrite original image
+                ctx.putImageData(imageData, 0, 0);
+
+                layer.backgroundImageCanvas = imageCanvas;
+                layer.drawLayer(this.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
+            }
+        });
+    }
+
 }
