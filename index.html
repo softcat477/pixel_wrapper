@@ -15,9 +15,6 @@
 
 <div id="image-elements">
 </div>
-<!-- <img id="layer1-img" src="{{layer1_url}}" style="display: none;" />
-<img id="layer2-img" src="{{layer2_url}}" style="display: none;" />
-<img id="layer3-img" src="{{layer3_url}}" style="display: none;" /> -->
 
 <div id="diva-wrapper"></div>
 <script src="js/diva.js"></script>
@@ -36,8 +33,8 @@
 <script>
     // Dynamically create img elements 
     var inputLayers = {{layer_urls|safe}};
-    var inputLength = inputLayers.length;
-    for (var i = 0; i < inputLength; i++) {
+    var numberInputLayers = inputLayers.length;
+    for (var i = 0; i < numberInputLayers; i++) {
         var img = document.createElement("IMG");
         img.id = "layer" + (i+1) + "-img";
         img.src = inputLayers[i];

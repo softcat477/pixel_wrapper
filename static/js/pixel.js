@@ -1178,8 +1178,6 @@
 
 	var _colour = __webpack_require__(6);
 
-	var _export = __webpack_require__(10);
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var PixelWrapper = exports.PixelWrapper = function () {
@@ -1207,14 +1205,43 @@
 	        value: function deactivate() {
 	            this.destroyButtons();
 	        }
+
+	        /**
+	         *  Creates the number of required layers based on the number of input ports in the Rodan job.
+	         *  The variable numberInputLayers is defined in the outermost index.html 
+	         */
+
 	    }, {
 	        key: 'createLayers',
 	        value: function createLayers() {
-	            var layer2 = new _layer.Layer(2, new _colour.Colour(255, 51, 102, 1), "Layer 2", this.pixelInstance, 0.5),
-	                layer3 = new _layer.Layer(3, new _colour.Colour(255, 255, 10, 1), "Layer 3", this.pixelInstance, 0.5);
+	            var numberToAdd = numberInputLayers - 1; // There is 1 layer created by default
 
-	            this.layers.push(layer2);
-	            this.layers.push(layer3);
+	            for (var i = 2; i < numberToAdd + 2; i++) {
+	                var colour = void 0;
+	                switch (i) {
+	                    case 2:
+	                        colour = new _colour.Colour(255, 51, 102, 1);
+	                        break;
+	                    case 3:
+	                        colour = new _colour.Colour(255, 255, 10, 1);
+	                        break;
+	                    case 4:
+	                        colour = new _colour.Colour(2, 136, 0, 1);
+	                        break;
+	                    case 5:
+	                        colour = new _colour.Colour(96, 0, 186, 1);
+	                        break;
+	                    case 6:
+	                        colour = new _colour.Colour(239, 143, 0, 1);
+	                        break;
+	                    case 7:
+	                        colour = new _colour.Colour(71, 239, 200, 1);
+	                        break;
+	                }
+	                var layer = new _layer.Layer(i, colour, "Layer " + i, this.pixelInstance, 0.5);
+	                this.layers.push(layer);
+	            }
+
 	            this.pixelInstance.layerIdCounter = this.layers.length + 1;
 	        }
 	    }, {
@@ -1226,7 +1253,7 @@
 	                rodanExportText = document.createTextNode("Submit To Rodan");
 
 	            this.exportToRodan = function () {
-	                _this.checkValid();
+	                _this.createBackgroundLayer();
 	            }; // This will call exportLayersToRodan when done
 
 	            rodanExportButton.setAttribute("id", "rodan-export-button");
@@ -1243,20 +1270,8 @@
 	            rodanExportButton.parentNode.removeChild(rodanExportButton);
 	        }
 	    }, {
-	        key: 'checkValid',
-	        value: function checkValid() {
-	            if (this.layers.length !== 3) {
-	                window.alert("You need to have exactly 3 layers for classification!");
-	            } else {
-	                this.layersCount = this.layers.length;
-	                this.createBackgroundLayer();
-	            }
-	        }
-	    }, {
 	        key: 'exportLayersToRodan',
 	        value: function exportLayersToRodan() {
-	            var _this2 = this;
-
 	            console.log("Exporting!");
 
 	            var count = this.layers.length;
@@ -1271,7 +1286,6 @@
 	                count -= 1;
 	                if (count === 0) {
 	                    console.log(urlList);
-	                    console.log(_this2.layers.length);
 	                    console.log("done");
 
 	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
@@ -1289,9 +1303,13 @@
 	    }, {
 	        key: 'createBackgroundLayer',
 	        value: function createBackgroundLayer() {
-	            var _this3 = this;
+	            var _this2 = this;
 
-	            var backgroundLayer = new _layer.Layer(this.layersCount + 1, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
+	            this.layersCount = this.layers.length;
+
+	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
+	            // this backgroundLayer is only created upon submitting (so no conflicts)
+	            var backgroundLayer = new _layer.Layer(0, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
 	                pageIndex = this.pageIndex,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
@@ -1315,13 +1333,13 @@
 	                layerCanvas.height = height;
 	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
 
-	                _this3.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
 	            });
 	        }
 	    }, {
 	        key: 'subtractLayerFromBackground',
 	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
-	            var _this4 = this;
+	            var _this3 = this;
 
 	            var chunkSize = width,
 	                chunkNum = 0,
@@ -1348,7 +1366,7 @@
 	                        col = 0;
 	                    }
 	                }
-	                if (_this4.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
+	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
 	                    // recall function
 	                    setTimeout(doChunk, 1);
 	                }
@@ -1377,7 +1395,7 @@
 	                } else if (this.layersCount === 0) {
 	                    // Done generating background layer
 	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-	                    this.layers.push(backgroundLayer);
+	                    this.layers.unshift(backgroundLayer);
 	                    this.uiManager.destroyExportElements();
 	                    this.exportLayersToRodan();
 	                }
@@ -1389,10 +1407,9 @@
 	    }, {
 	        key: 'rodanImagesToCanvas',
 	        value: function rodanImagesToCanvas() {
-	            var _this5 = this;
+	            var _this4 = this;
 
 	            this.layers.forEach(function (layer) {
-	                // Current implementation only supports 3 layers
 	                var img = document.getElementById("layer" + layer.layerId + "-img");
 	                if (img !== null) {
 	                    var imageCanvas = document.createElement("canvas");
@@ -1414,7 +1431,7 @@
 	                    ctx.putImageData(imageData, 0, 0);
 
 	                    layer.backgroundImageCanvas = imageCanvas;
-	                    layer.drawLayer(_this5.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
+	                    layer.drawLayer(_this4.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
 	                }
 	            });
 	        }
