@@ -265,9 +265,7 @@ class PixelInteractive(RodanTask):
     	# Create data to pass.
     	data = {
     		'json': create_json(inputs['Image'][0]['resource_path']),
-            'layer1_url' : layer1_url,
-            'layer2_url' : layer2_url,
-            'layer3_url' : layer3_url,
+            'layer_urls': layer_urls,
         }
     	return ('index.html', data)
 
