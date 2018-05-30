@@ -164,6 +164,13 @@ class PixelInteractive(RodanTask):
     output_port_types = [
         # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
         {
+            'name': 'rgba PNG - Layer 0 Output',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 1,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
             'name': 'rgba PNG - Layer 1 Output',
             'resource_types': ['image/rgba+png'],
             'minimum': 0,
