@@ -132,67 +132,112 @@ class PixelInteractive(RodanTask):
             'maximum': 1,
             'is_list': False
         },
+        {
+            'name': 'PNG - Layer 4 Input',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'PNG - Layer 5 Input',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'PNG - Layer 6 Input',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'PNG - Layer 7 Input',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
     ]
     output_port_types = [
         # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
         {
-            'name': 'rgba PNG - Layer 1 Output',
+            'name': 'rgba PNG - Layer 0 Output',
             'resource_types': ['image/rgba+png'],
             'minimum': 1,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'rgba PNG - Layer 1 Output',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'rgba PNG - Layer 2 Output',
             'resource_types': ['image/rgba+png'],
-            'minimum': 1,
+            'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'rgba PNG - Layer 3 Output',
             'resource_types': ['image/rgba+png'],
-            'minimum': 1,
+            'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
         {
             'name': 'rgba PNG - Layer 4 Output',
             'resource_types': ['image/rgba+png'],
-            'minimum': 1,
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'rgba PNG - Layer 5 Output',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'rgba PNG - Layer 6 Output',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
+            'maximum': 1,
+            'is_list': False
+        },
+        {
+            'name': 'rgba PNG - Layer 7 Output',
+            'resource_types': ['image/rgba+png'],
+            'minimum': 0,
             'maximum': 1,
             'is_list': False
         },
     ]
 
     def get_my_interface(self, inputs, settings):
-		# Get input.
-        layer1_url = ''
-        layer2_url = ''
-        layer3_url = ''
+        # Get input.
+        layer_urls = []
 
         query_url = get_iiif_query(inputs['Image'][0]['resource_path'])
 
-        if 'PNG - Layer 1 Input' in inputs:
-            layer1_path = inputs['PNG - Layer 1 Input'][0]['resource_path']
-            layer1_url = media_file_path_to_public_url(layer1_path)
+        for i in range(1, 8):
+            if 'PNG - Layer {} Input'.format(i) in inputs:
+                layer_path = inputs['PNG - Layer {} Input'.format(i)][0]['resource_path']
+                layer_urls.append(media_file_path_to_public_url(layer_path))
 
-        if 'PNG - Layer 2 Input' in inputs:
-            layer2_path = inputs['PNG - Layer 2 Input'][0]['resource_path']
-            layer2_url = media_file_path_to_public_url(layer2_path)
-
-        if 'PNG - Layer 3 Input' in inputs:
-            layer3_path = inputs['PNG - Layer 3 Input'][0]['resource_path']
-            layer3_url = media_file_path_to_public_url(layer3_path)
-
-    	# Create data to pass.
-    	data = {
-    		'json': create_json(inputs['Image'][0]['resource_path']),
-            'layer1_url' : layer1_url,
-            'layer2_url' : layer2_url,
-            'layer3_url' : layer3_url,
+        # Create data to pass.
+        data = {
+            'json': create_json(inputs['Image'][0]['resource_path']),
+            'layer_urls': layer_urls,
         }
-    	return ('index.html', data)
+        return ('index.html', data)
 
     def run_my_task(self, inputs, settings, outputs):
         if '@done' not in settings:

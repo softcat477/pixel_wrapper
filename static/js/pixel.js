@@ -60,29 +60,27 @@
 	 *
 	 **/
 
-	var _pixelWrapper = __webpack_require__(2);
-
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
 	var _rectangle = __webpack_require__(3);
 
-	var _layer = __webpack_require__(7);
+	var _layer = __webpack_require__(6);
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(5);
 
-	var _export = __webpack_require__(10);
+	var _export = __webpack_require__(9);
 
-	var _uiManager = __webpack_require__(11);
+	var _uiManager = __webpack_require__(10);
 
-	var _tools = __webpack_require__(13);
+	var _tools = __webpack_require__(12);
 
-	var _import = __webpack_require__(14);
+	var _import = __webpack_require__(13);
 
-	var _selection = __webpack_require__(15);
+	var _selection = __webpack_require__(14);
 
-	var _tutorial = __webpack_require__(16);
+	var _tutorial = __webpack_require__(15);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(11);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -144,10 +142,6 @@
 
 	            if (this.tools === null) this.tools = new _tools.Tools(this);
 
-	            // Activate wrapper
-	            this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
-	            this.pixelWrapper.activate();
-
 	            this.uiManager.createPluginElements(this.layers);
 	            this.scrollEventHandle = this.subscribeToScrollEvent();
 	            this.zoomEventHandle = this.subscribeToZoomLevelWillChangeEvent();
@@ -166,9 +160,6 @@
 	    }, {
 	        key: 'deactivatePlugin',
 	        value: function deactivatePlugin() {
-	            // Deactivate wrapper
-	            this.pixelWrapper.deactivate();
-
 	            global.Diva.Events.unsubscribe(this.scrollEventHandle);
 	            global.Diva.Events.unsubscribe(this.zoomEventHandle);
 
@@ -1159,268 +1150,160 @@
 /***/ }),
 /* 1 */,
 /* 2 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, exports) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.PixelWrapper = undefined;
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _rectangle = __webpack_require__(3);
-
-	var _point = __webpack_require__(5);
-
-	var _layer = __webpack_require__(7);
-
-	var _colour = __webpack_require__(6);
-
-	var _export = __webpack_require__(10);
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var PixelWrapper = exports.PixelWrapper = function () {
-	    function PixelWrapper(pixelInstance) {
-	        _classCallCheck(this, PixelWrapper);
+	/*jshint esversion: 6 */
+	var Point = exports.Point = function () {
+	    /**
+	     * The relative origins allow to position the point at the same page location no matter what the zoom level is
+	     * @param relativeOriginX
+	     * @param relativeOriginY
+	     * @param pageIndex
+	     */
+	    function Point(relativeOriginX, relativeOriginY, pageIndex) {
+	        _classCallCheck(this, Point);
 
-	        this.pixelInstance = pixelInstance;
-	        this.layers = pixelInstance.layers;
-	        this.layersCount = this.layers.length;
-	        this.uiManager = pixelInstance.uiManager;
-	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
-	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
-	        this.exportInterrupted = false;
+	        this.relativeOriginX = relativeOriginX;
+	        this.relativeOriginY = relativeOriginY;
+	        this.pageIndex = pageIndex;
 	    }
 
-	    _createClass(PixelWrapper, [{
-	        key: 'activate',
-	        value: function activate() {
-	            this.createLayers();
-	            this.createButtons();
-	            this.rodanImagesToCanvas();
-	        }
-	    }, {
-	        key: 'deactivate',
-	        value: function deactivate() {
-	            this.destroyButtons();
-	        }
-	    }, {
-	        key: 'createLayers',
-	        value: function createLayers() {
-	            var layer2 = new _layer.Layer(2, new _colour.Colour(255, 51, 102, 1), "Layer 2", this.pixelInstance, 0.5),
-	                layer3 = new _layer.Layer(3, new _colour.Colour(255, 255, 10, 1), "Layer 3", this.pixelInstance, 0.5);
+	    /**
+	     * Calculates the coordinates of a point on a page in pixels given the zoom level
+	     * where the top left corner of the page always represents the (0,0) coordinate.
+	     * The function scales the relative coordinates to the required zoom level.
+	     * @param zoomLevel
+	     * @returns {{x: number, y: number}}
+	     */
 
-	            this.layers.push(layer2);
-	            this.layers.push(layer3);
-	            this.pixelInstance.layerIdCounter = this.layers.length + 1;
-	        }
-	    }, {
-	        key: 'createButtons',
-	        value: function createButtons() {
-	            var _this = this;
 
-	            var rodanExportButton = document.createElement("button"),
-	                rodanExportText = document.createTextNode("Submit To Rodan");
-
-	            this.exportToRodan = function () {
-	                _this.checkValid();
-	            }; // This will call exportLayersToRodan when done
-
-	            rodanExportButton.setAttribute("id", "rodan-export-button");
-	            rodanExportButton.appendChild(rodanExportText);
-	            rodanExportButton.addEventListener("click", this.exportToRodan);
-
-	            document.body.appendChild(rodanExportButton);
-	        }
-	    }, {
-	        key: 'destroyButtons',
-	        value: function destroyButtons() {
-	            var rodanExportButton = document.getElementById("rodan-export-button");
-
-	            rodanExportButton.parentNode.removeChild(rodanExportButton);
-	        }
-	    }, {
-	        key: 'checkValid',
-	        value: function checkValid() {
-	            if (this.layers.length !== 3) {
-	                window.alert("You need to have exactly 3 layers for classification!");
-	            } else {
-	                this.layersCount = this.layers.length;
-	                this.createBackgroundLayer();
-	            }
-	        }
-	    }, {
-	        key: 'exportLayersToRodan',
-	        value: function exportLayersToRodan() {
-	            var _this2 = this;
-
-	            console.log("Exporting!");
-
-	            var count = this.layers.length;
-	            var urlList = [];
-
-	            this.layers.forEach(function (layer) {
-
-	                console.log(layer.layerId + " " + layer.layerName);
-
-	                var dataURL = layer.getCanvas().toDataURL();
-	                urlList[layer.layerId] = dataURL;
-	                count -= 1;
-	                if (count === 0) {
-	                    console.log(urlList);
-	                    console.log(_this2.layers.length);
-	                    console.log("done");
-
-	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
-	                }
-	            });
+	    _createClass(Point, [{
+	        key: "getCoordsInPage",
+	        value: function getCoordsInPage(zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+	            return {
+	                x: this.relativeOriginX * scaleRatio,
+	                y: this.relativeOriginY * scaleRatio
+	            };
 	        }
 
 	        /**
-	         *  Generates a background layer by iterating over all the pixel data for each layer and 
-	         *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
-	         *  replicates what the exportLayersAsImageData function does but for generating the background
-	         *  layer, and there are numerous (albeit small) differences that requires a new function
+	         * Calculates the coordinates of a point on the diva canvas (viewport) in pixels, where the top left corner of the canvas
+	         * represents the (0,0) coordinate.
+	         * This is relative to the viewport padding.
+	         * @param zoomLevel
+	         * @param pageIndex
+	         * @param renderer
+	         * @returns {{x: number, y: number}}
 	         */
 
 	    }, {
-	        key: 'createBackgroundLayer',
-	        value: function createBackgroundLayer() {
-	            var _this3 = this;
+	        key: "getCoordsInViewport",
+	        value: function getCoordsInViewport(zoomLevel, pageIndex, renderer) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
 
-	            var backgroundLayer = new _layer.Layer(this.layersCount + 1, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
-	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                pageIndex = this.pageIndex,
-	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+	            var absoluteCoordinates = this.getCoordsInPage(zoomLevel);
 
-	            // Highlight whole image for background layer
-	            var rect = new _rectangle.Rectangle(new _point.Point(0, 0, pageIndex), width, height, "add");
-	            backgroundLayer.addShapeToLayer(rect);
-	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            var offsetX = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteCoordinates.x,
+	                offsetY = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteCoordinates.y;
 
-	            // Instantiate progress bar
-	            this.uiManager.createExportElements(this);
-
-	            this.layers.forEach(function (layer) {
-	                // Create layer canvas and draw (so pixel data can be accessed)
-	                var layerCanvas = document.createElement('canvas');
-	                layerCanvas.setAttribute("class", "export-page-canvas");
-	                layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
-	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
-	                layerCanvas.width = width;
-	                layerCanvas.height = height;
-	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
-
-	                _this3.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
-	            });
-	        }
-	    }, {
-	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
-	            var _this4 = this;
-
-	            var chunkSize = width,
-	                chunkNum = 0,
-	                row = 0,
-	                col = 0,
-	                pixelCtx = layerCanvas.getContext('2d');
-	            var doChunk = function doChunk() {
-	                // Use this method instead of nested for so UI isn't blocked
-	                var cnt = chunkSize;
-	                chunkNum++;
-	                while (cnt--) {
-	                    if (row >= height) break;
-	                    if (col < width) {
-	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
-	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-	                        if (colour.alpha !== 0) {
-	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
-	                            backgroundLayer.addShapeToLayer(currentPixel);
-	                        }
-	                        col++;
-	                    } else {
-	                        // Reached end of row, jump to next
-	                        row++;
-	                        col = 0;
-	                    }
-	                }
-	                if (_this4.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
-	                    // recall function
-	                    setTimeout(doChunk, 1);
-	                }
-	            };
-	            doChunk();
-	        }
-	    }, {
-	        key: 'progress',
-	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer) {
-	            if (row === height || this.exportInterrupted) {
-	                this.layersCount -= 1;
-	            }
-	            if (row < height && !this.exportInterrupted) {
-	                var percentage = chunkNum * chunkSize * 100 / (height * chunkSize),
-	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
-	                this.pixelInstance.uiManager.updateProgress(roundedPercentage);
-	                return {
-	                    needsRecall: true
-	                };
-	            } else {
-	                if (this.exportInterrupted && this.layersCount === 0) {
-	                    this.exportInterrupted = false;
-	                    this.uiManager.destroyExportElements();
-	                } else if (this.exportInterrupted) {
-	                    // Do nothing and wait until last layer has finished processing to cancel
-	                } else if (this.layersCount === 0) {
-	                    // Done generating background layer
-	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-	                    this.layers.push(backgroundLayer);
-	                    this.uiManager.destroyExportElements();
-	                    this.exportLayersToRodan();
-	                }
-	            }
 	            return {
-	                needsRecall: false
+	                x: offsetX,
+	                y: offsetY
 	            };
 	        }
+
+	        /**
+	         * Calculates the coordinates of a point on a page in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @returns {{x: number, y: number}}
+	         */
+
 	    }, {
-	        key: 'rodanImagesToCanvas',
-	        value: function rodanImagesToCanvas() {
-	            var _this5 = this;
+	        key: "getAbsoluteCoordinatesFromPadded",
+	        value: function getAbsoluteCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
 
-	            this.layers.forEach(function (layer) {
-	                // Current implementation only supports 3 layers
-	                var img = document.getElementById("layer" + layer.layerId + "-img");
-	                if (img !== null) {
-	                    var imageCanvas = document.createElement("canvas");
-	                    imageCanvas.width = layer.getCanvas().width;
-	                    imageCanvas.height = layer.getCanvas().height;
-	                    var ctx = imageCanvas.getContext("2d");
+	            return {
+	                x: Math.round(paddedX - (renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX)),
+	                y: Math.round(paddedY - (renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY))
+	            };
+	        }
 
-	                    ctx.drawImage(img, 0, 0);
+	        /**
+	         * Calculates the coordinates of a point on diva canvas (viewport) in pixels
+	         * from the absolute coordinates on the page
+	         * @param pageIndex
+	         * @param renderer
+	         * @param absoluteX
+	         * @param absoluteY
+	         * @returns {{x: *, y: *}}
+	         */
 
-	                    var imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
-	                        data = imageData.data;
+	    }, {
+	        key: "getPaddedCoordinatesFromAbsolute",
+	        value: function getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteX, absoluteY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
 
-	                    for (var i = 0; i < data.length; i += 4) {
-	                        data[i] = layer.colour.red; // red
-	                        data[i + 1] = layer.colour.green; // green
-	                        data[i + 2] = layer.colour.blue; // blue
-	                    }
-	                    // overwrite original image
-	                    ctx.putImageData(imageData, 0, 0);
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            return {
+	                x: renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteX,
+	                y: renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteY
+	            };
+	        }
 
-	                    layer.backgroundImageCanvas = imageCanvas;
-	                    layer.drawLayer(_this5.pixelInstance.core.getSettings().maxZoomLevel, layer.getCanvas());
-	                }
-	            });
+	        /**
+	         * Calculates the coordinates of a point relative to a page (used to calculate the absolute coordinates at different zoom levels) in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @param zoomLevel
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getRelativeCoordinatesFromPadded",
+	        value: function getRelativeCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY, zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	            // (to make it look like it is on top of a page in Diva)
+	            var absoluteRectOriginX = paddedX - renderer._getImageOffset(pageIndex).left + renderer._viewport.left - viewportPaddingX,
+	                absoluteRectOriginY = paddedY - renderer._getImageOffset(pageIndex).top + renderer._viewport.top - viewportPaddingY;
+
+	            return {
+	                x: absoluteRectOriginX / scaleRatio,
+	                y: absoluteRectOriginY / scaleRatio
+	            };
 	        }
 	    }]);
 
-	    return PixelWrapper;
+	    return Point;
 	}();
 
 /***/ }),
@@ -1438,9 +1321,9 @@
 
 	var _shape = __webpack_require__(4);
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(5);
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1652,9 +1535,9 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(5);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1797,164 +1680,6 @@
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	/*jshint esversion: 6 */
-	var Point = exports.Point = function () {
-	    /**
-	     * The relative origins allow to position the point at the same page location no matter what the zoom level is
-	     * @param relativeOriginX
-	     * @param relativeOriginY
-	     * @param pageIndex
-	     */
-	    function Point(relativeOriginX, relativeOriginY, pageIndex) {
-	        _classCallCheck(this, Point);
-
-	        this.relativeOriginX = relativeOriginX;
-	        this.relativeOriginY = relativeOriginY;
-	        this.pageIndex = pageIndex;
-	    }
-
-	    /**
-	     * Calculates the coordinates of a point on a page in pixels given the zoom level
-	     * where the top left corner of the page always represents the (0,0) coordinate.
-	     * The function scales the relative coordinates to the required zoom level.
-	     * @param zoomLevel
-	     * @returns {{x: number, y: number}}
-	     */
-
-
-	    _createClass(Point, [{
-	        key: "getCoordsInPage",
-	        value: function getCoordsInPage(zoomLevel) {
-	            var scaleRatio = Math.pow(2, zoomLevel);
-	            return {
-	                x: this.relativeOriginX * scaleRatio,
-	                y: this.relativeOriginY * scaleRatio
-	            };
-	        }
-
-	        /**
-	         * Calculates the coordinates of a point on the diva canvas (viewport) in pixels, where the top left corner of the canvas
-	         * represents the (0,0) coordinate.
-	         * This is relative to the viewport padding.
-	         * @param zoomLevel
-	         * @param pageIndex
-	         * @param renderer
-	         * @returns {{x: number, y: number}}
-	         */
-
-	    }, {
-	        key: "getCoordsInViewport",
-	        value: function getCoordsInViewport(zoomLevel, pageIndex, renderer) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
-
-	            var absoluteCoordinates = this.getCoordsInPage(zoomLevel);
-
-	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
-	            // (to make it look like it is on top of a page in Diva)
-	            var offsetX = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteCoordinates.x,
-	                offsetY = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteCoordinates.y;
-
-	            return {
-	                x: offsetX,
-	                y: offsetY
-	            };
-	        }
-
-	        /**
-	         * Calculates the coordinates of a point on a page in pixels
-	         * from the padded coordinates used to display the point on diva canvas (viewport)
-	         * @param pageIndex
-	         * @param renderer
-	         * @param paddedX
-	         * @param paddedY
-	         * @returns {{x: number, y: number}}
-	         */
-
-	    }, {
-	        key: "getAbsoluteCoordinatesFromPadded",
-	        value: function getAbsoluteCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
-
-	            return {
-	                x: Math.round(paddedX - (renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX)),
-	                y: Math.round(paddedY - (renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY))
-	            };
-	        }
-
-	        /**
-	         * Calculates the coordinates of a point on diva canvas (viewport) in pixels
-	         * from the absolute coordinates on the page
-	         * @param pageIndex
-	         * @param renderer
-	         * @param absoluteX
-	         * @param absoluteY
-	         * @returns {{x: *, y: *}}
-	         */
-
-	    }, {
-	        key: "getPaddedCoordinatesFromAbsolute",
-	        value: function getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteX, absoluteY) {
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
-
-	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
-	            // (to make it look like it is on top of a page in Diva)
-	            return {
-	                x: renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteX,
-	                y: renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteY
-	            };
-	        }
-
-	        /**
-	         * Calculates the coordinates of a point relative to a page (used to calculate the absolute coordinates at different zoom levels) in pixels
-	         * from the padded coordinates used to display the point on diva canvas (viewport)
-	         * @param pageIndex
-	         * @param renderer
-	         * @param paddedX
-	         * @param paddedY
-	         * @param zoomLevel
-	         * @returns {{x: number, y: number}}
-	         */
-
-	    }, {
-	        key: "getRelativeCoordinatesFromPadded",
-	        value: function getRelativeCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY, zoomLevel) {
-	            var scaleRatio = Math.pow(2, zoomLevel);
-
-	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
-	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
-
-	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
-	            // (to make it look like it is on top of a page in Diva)
-	            var absoluteRectOriginX = paddedX - renderer._getImageOffset(pageIndex).left + renderer._viewport.left - viewportPaddingX,
-	                absoluteRectOriginY = paddedY - renderer._getImageOffset(pageIndex).top + renderer._viewport.top - viewportPaddingY;
-
-	            return {
-	                x: absoluteRectOriginX / scaleRatio,
-	                y: absoluteRectOriginY / scaleRatio
-	            };
-	        }
-	    }]);
-
-	    return Point;
-	}();
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	/*jshint esversion: 6 */
 	var Colour = exports.Colour = function () {
 	    function Colour(red, green, blue, alpha) {
 	        _classCallCheck(this, Colour);
@@ -2027,7 +1752,7 @@
 	}();
 
 /***/ }),
-/* 7 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2040,11 +1765,11 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _path = __webpack_require__(8);
+	var _path = __webpack_require__(7);
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
-	var _action = __webpack_require__(9);
+	var _action = __webpack_require__(8);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2398,7 +2123,7 @@
 	}();
 
 /***/ }),
-/* 8 */
+/* 7 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -2525,7 +2250,7 @@
 	}();
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -2545,7 +2270,7 @@
 	};
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2558,9 +2283,9 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(5);
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3019,10 +2744,10 @@
 	}();
 
 /***/ }),
-/* 11 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
@@ -3032,9 +2757,9 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(2);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(11);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3053,27 +2778,33 @@
 	    }
 
 	    _createClass(UIManager, [{
-	        key: "createPluginElements",
+	        key: 'createPluginElements',
 	        value: function createPluginElements(layers) {
 	            this.placeLayerCanvasesInDiva(layers);
 	            this.createUndoButton();
 	            this.createRedoButton();
-	            this.createDeleteLayerButton();
-	            this.createCreateLayerButton();
+	            // Disable buttons if in standalone Pixel or no input layers
+	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	                this.createDeleteLayerButton();
+	                this.createCreateLayerButton();
+	            }
 	            this.createLayersView(layers);
 	            this.createToolsView(this.pixelInstance.tools.getAllTools());
 	            this.createExportButtons();
 	            this.createImportButtons();
 	        }
 	    }, {
-	        key: "destroyPluginElements",
+	        key: 'destroyPluginElements',
 	        value: function destroyPluginElements(layers, background) {
 	            this.destroyLayerSelectors(layers);
 	            this.destroyBrushSizeSelector();
 	            this.destroyUndoButton();
 	            this.destroyRedoButton();
-	            this.destroyDeleteLayerButton();
-	            this.destroyCreateLayerButton();
+	            // Disable buttons if in standalone Pixel or no input layers
+	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	                this.destroyDeleteLayerButton();
+	                this.destroyCreateLayerButton();
+	            }
 	            this.destroyExportButtons();
 	            this.destroyImportButtons();
 	            this.destroyPixelCanvases(layers);
@@ -3087,7 +2818,7 @@
 	        // Tools are strings or enums
 
 	    }, {
-	        key: "createToolsView",
+	        key: 'createToolsView',
 	        value: function createToolsView(tools) {
 	            var _this = this;
 
@@ -3127,13 +2858,13 @@
 	            this.pixelInstance.tools.setCurrentTool(this.pixelInstance.tools.getCurrentTool());
 	        }
 	    }, {
-	        key: "destroyToolsView",
+	        key: 'destroyToolsView',
 	        value: function destroyToolsView() {
 	            var form = document.getElementById("tool-selector");
 	            form.parentNode.removeChild(form);
 	        }
 	    }, {
-	        key: "placeLayerCanvasesInDiva",
+	        key: 'placeLayerCanvasesInDiva',
 	        value: function placeLayerCanvasesInDiva(layers) {
 	            var divaCanvas = this.pixelInstance.core.getSettings().renderer._canvas;
 	            for (var index = layers.length - 1; index >= 0; index--) {
@@ -3146,14 +2877,14 @@
 	            if (this.pixelInstance.background.isActivated()) this.pixelInstance.background.getCanvas().style.opacity = this.pixelInstance.background.getLayerOpacity();else this.pixelInstance.background.getCanvas().style.opacity = 0;
 	        }
 	    }, {
-	        key: "destroyPixelCanvases",
+	        key: 'destroyPixelCanvases',
 	        value: function destroyPixelCanvases(layers) {
 	            layers.forEach(function (layer) {
 	                if (layer.getCanvas().parentNode !== null) layer.getCanvas().parentNode.removeChild(layer.getCanvas());
 	            });
 	        }
 	    }, {
-	        key: "createOpacitySlider",
+	        key: 'createOpacitySlider',
 	        value: function createOpacitySlider(layer, parentElement, referenceNode) {
 	            var br = document.createElement("br"),
 	                opacityDiv = document.createElement("div"),
@@ -3191,7 +2922,7 @@
 	            parentElement.insertBefore(br, referenceNode.nextSibling);
 	        }
 	    }, {
-	        key: "destroyOpacitySlider",
+	        key: 'destroyOpacitySlider',
 	        value: function destroyOpacitySlider(layer) {
 	            var opacitySlider = document.getElementById("layer-" + layer.layerId + "-opacity-tool"),
 	                br = document.getElementById("opacity-br-" + layer.layerId);
@@ -3199,7 +2930,7 @@
 	            br.parentElement.removeChild(br);
 	        }
 	    }, {
-	        key: "createBackground",
+	        key: 'createBackground',
 	        value: function createBackground() {
 	            var backgroundViewDiv = document.createElement("div");
 	            backgroundViewDiv.setAttribute("id", "background-view");
@@ -3257,13 +2988,13 @@
 	            document.body.appendChild(backgroundViewDiv);
 	        }
 	    }, {
-	        key: "destroyLockedLayerSelectors",
+	        key: 'destroyLockedLayerSelectors',
 	        value: function destroyLockedLayerSelectors() {
 	            var backgroundViewDiv = document.getElementById("background-view");
 	            backgroundViewDiv.parentNode.removeChild(backgroundViewDiv);
 	        }
 	    }, {
-	        key: "createLayersView",
+	        key: 'createLayersView',
 	        value: function createLayersView(layers) {
 	            var _this2 = this;
 
@@ -3378,13 +3109,13 @@
 	            this.createBackground(layers);
 	        }
 	    }, {
-	        key: "destroyLayerSelectors",
+	        key: 'destroyLayerSelectors',
 	        value: function destroyLayerSelectors() {
 	            var layersViewDiv = document.getElementById("layers-view");
 	            layersViewDiv.parentNode.removeChild(layersViewDiv);
 	        }
 	    }, {
-	        key: "highlightLayerSelectorById",
+	        key: 'highlightLayerSelectorById',
 	        value: function highlightLayerSelectorById(layerToHighlightId) {
 	            var _this3 = this;
 
@@ -3414,7 +3145,7 @@
 	            });
 	        }
 	    }, {
-	        key: "createBrushSizeSelector",
+	        key: 'createBrushSizeSelector',
 	        value: function createBrushSizeSelector() {
 	            var _this4 = this;
 
@@ -3440,13 +3171,13 @@
 	            document.body.appendChild(brushSizeDiv);
 	        }
 	    }, {
-	        key: "destroyBrushSizeSelector",
+	        key: 'destroyBrushSizeSelector',
 	        value: function destroyBrushSizeSelector() {
 	            var brushSizeDiv = document.getElementById("brush-size");
 	            if (brushSizeDiv !== null) brushSizeDiv.parentNode.removeChild(brushSizeDiv);
 	        }
 	    }, {
-	        key: "createUndoButton",
+	        key: 'createUndoButton',
 	        value: function createUndoButton() {
 	            var _this5 = this;
 
@@ -3464,13 +3195,13 @@
 	            document.body.appendChild(undoButton);
 	        }
 	    }, {
-	        key: "destroyUndoButton",
+	        key: 'destroyUndoButton',
 	        value: function destroyUndoButton() {
 	            var undoButton = document.getElementById("undo-button");
 	            undoButton.parentNode.removeChild(undoButton);
 	        }
 	    }, {
-	        key: "createRedoButton",
+	        key: 'createRedoButton',
 	        value: function createRedoButton() {
 	            var _this6 = this;
 
@@ -3488,15 +3219,20 @@
 	            document.body.appendChild(redoButton);
 	        }
 	    }, {
-	        key: "destroyRedoButton",
+	        key: 'destroyRedoButton',
 	        value: function destroyRedoButton() {
 	            var redoButton = document.getElementById("redo-button");
 	            redoButton.parentNode.removeChild(redoButton);
 	        }
 	    }, {
-	        key: "createDeleteLayerButton",
+	        key: 'createDeleteLayerButton',
 	        value: function createDeleteLayerButton() {
 	            var _this7 = this;
+
+	            // Check if we're in the wrapper, if so then disable this function
+	            if (document.getElementById("rodan-export-button") !== null) {
+	                return;
+	            }
 
 	            var deleteLayerButton = document.createElement("button"),
 	                text = document.createTextNode("Delete selected layer");
@@ -3518,15 +3254,25 @@
 	            document.body.appendChild(deleteLayerButton);
 	        }
 	    }, {
-	        key: "destroyDeleteLayerButton",
+	        key: 'destroyDeleteLayerButton',
 	        value: function destroyDeleteLayerButton() {
+	            // Check if we're in the wrapper, if so then disable this function
+	            if (document.getElementById("rodan-export-button") !== null) {
+	                return;
+	            }
+
 	            var deleteLayerButton = document.getElementById("delete-layer-button");
 	            deleteLayerButton.parentNode.removeChild(deleteLayerButton);
 	        }
 	    }, {
-	        key: "createCreateLayerButton",
+	        key: 'createCreateLayerButton',
 	        value: function createCreateLayerButton() {
 	            var _this8 = this;
+
+	            // Check if we're in the wrapper, if so then disable this function
+	            if (document.getElementById("rodan-export-button") !== null) {
+	                return;
+	            }
 
 	            var createLayerButton = document.createElement("button"),
 	                text = document.createTextNode("Create new layer");
@@ -3542,13 +3288,18 @@
 	            document.body.appendChild(createLayerButton);
 	        }
 	    }, {
-	        key: "destroyCreateLayerButton",
+	        key: 'destroyCreateLayerButton',
 	        value: function destroyCreateLayerButton() {
+	            // Check if we're in the wrapper, if so then disable this function
+	            if (document.getElementById("rodan-export-button") !== null) {
+	                return;
+	            }
+
 	            var createLayerButton = document.getElementById("create-layer-button");
 	            createLayerButton.parentNode.removeChild(createLayerButton);
 	        }
 	    }, {
-	        key: "createExportButtons",
+	        key: 'createExportButtons',
 	        value: function createExportButtons() {
 	            var _this9 = this;
 
@@ -3586,7 +3337,7 @@
 	            document.body.appendChild(pngDataExportButton);
 	        }
 	    }, {
-	        key: "destroyExportButtons",
+	        key: 'destroyExportButtons',
 	        value: function destroyExportButtons() {
 	            var csvexportButton = document.getElementById("csv-export-button"),
 	                pngexportButton = document.getElementById("png-export-button"),
@@ -3597,7 +3348,7 @@
 	            pngexportDataButton.parentNode.removeChild(pngexportDataButton);
 	        }
 	    }, {
-	        key: "createImportButtons",
+	        key: 'createImportButtons',
 	        value: function createImportButtons() {
 	            var _this10 = this;
 
@@ -3615,13 +3366,13 @@
 	            document.body.appendChild(imageLoader);
 	        }
 	    }, {
-	        key: "destroyImportButtons",
+	        key: 'destroyImportButtons',
 	        value: function destroyImportButtons() {
 	            var imageLoader = document.getElementById("imageLoader");
 	            imageLoader.parentNode.removeChild(imageLoader);
 	        }
 	    }, {
-	        key: "updateProgress",
+	        key: 'updateProgress',
 	        value: function updateProgress(percentage) {
 	            var percentageStr = percentage + "%",
 	                widthStr = "width: " + percentageStr;
@@ -3630,12 +3381,12 @@
 	            document.getElementById("pbar-inner-text").innerHTML = percentageStr;
 	        }
 	    }, {
-	        key: "destroyBackground",
+	        key: 'destroyBackground',
 	        value: function destroyBackground(layers) {
 	            this.pixelInstance.destroyLockedLayerSelectors(layers);
 	        }
 	    }, {
-	        key: "createExportElements",
+	        key: 'createExportElements',
 	        value: function createExportElements(exportInstance) {
 	            var exportDiv = document.createElement('div'),
 	                text = document.createTextNode("Exporting"),
@@ -3685,13 +3436,13 @@
 	            };
 	        }
 	    }, {
-	        key: "destroyExportElements",
+	        key: 'destroyExportElements',
 	        value: function destroyExportElements() {
 	            var exportDiv = document.getElementById("pixel-export-div");
 	            exportDiv.parentNode.removeChild(exportDiv);
 	        }
 	    }, {
-	        key: "destroyDownloadLinks",
+	        key: 'destroyDownloadLinks',
 	        value: function destroyDownloadLinks() {
 	            var downloadElements = document.getElementsByClassName("export-download");
 
@@ -3700,7 +3451,7 @@
 	            }
 	        }
 	    }, {
-	        key: "createProgressCanvas",
+	        key: 'createProgressCanvas',
 	        value: function createProgressCanvas(pageIndex, zoomLevel) {
 	            var height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, zoomLevel).height,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, zoomLevel).width;
@@ -3726,12 +3477,12 @@
 	            return progressCanvas;
 	        }
 	    }, {
-	        key: "markToolSelected",
+	        key: 'markToolSelected',
 	        value: function markToolSelected(tool) {
 	            document.getElementById(tool).checked = true;
 	        }
 	    }, {
-	        key: "getBrushSizeSelectorValue",
+	        key: 'getBrushSizeSelectorValue',
 	        value: function getBrushSizeSelectorValue() {
 	            // Brush size relative to scaleRatio to allow for more precise manipulations on higher zoom levels
 	            var brushSizeSlider = document.getElementById("brush-size-selector"),
@@ -3740,7 +3491,7 @@
 	            return 0.05 + Math.exp(brushSizeValue - 6); // 0.05 + e ^ (x - 6) was the most intuitive function we found in terms of brush size range
 	        }
 	    }, {
-	        key: "createBrushCursor",
+	        key: 'createBrushCursor',
 	        value: function createBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div"),
 	                divaViewport = document.getElementById("diva-1-viewport"),
@@ -3756,7 +3507,7 @@
 	            this.resizeBrushCursor();
 	        }
 	    }, {
-	        key: "resizeBrushCursor",
+	        key: 'resizeBrushCursor',
 	        value: function resizeBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div");
 
@@ -3769,7 +3520,7 @@
 	            cursorDiv.style.height = brushSizeSelectorValue + "px";
 	        }
 	    }, {
-	        key: "destroyBrushCursor",
+	        key: 'destroyBrushCursor',
 	        value: function destroyBrushCursor() {
 	            var cursorDiv = document.getElementById("brush-cursor-div");
 
@@ -3778,7 +3529,7 @@
 	            }
 	        }
 	    }, {
-	        key: "moveBrushCursor",
+	        key: 'moveBrushCursor',
 	        value: function moveBrushCursor(mousePos) {
 	            var cursorDiv = document.getElementById("brush-cursor-div"),
 	                scaleRatio = Math.pow(2, this.pixelInstance.core.getSettings().zoomLevel),
@@ -3788,13 +3539,13 @@
 	            cursorDiv.style.top = mousePos.y - brushSize / 2 - 1 + "px"; // the -1 is to account for the border width
 	        }
 	    }, {
-	        key: "restoreDefaultCursor",
+	        key: 'restoreDefaultCursor',
 	        value: function restoreDefaultCursor() {
 	            var mouseClickDiv = document.getElementById("diva-1-outer");
 	            mouseClickDiv.style.cursor = "default";
 	        }
 	    }, {
-	        key: "setMousePosition",
+	        key: 'setMousePosition',
 	        value: function setMousePosition(mousePos) {
 	            // Rectangle border width
 	            var borderWidth = 1;
@@ -3803,7 +3554,7 @@
 	            this.mouse.y = mousePos.y - borderWidth;
 	        }
 	    }, {
-	        key: "createRectanglePreview",
+	        key: 'createRectanglePreview',
 	        value: function createRectanglePreview(mousePos, layer) {
 	            this.setMousePosition(mousePos);
 
@@ -3822,7 +3573,7 @@
 	            divaOuter.insertBefore(element, divaViewport);
 	        }
 	    }, {
-	        key: "resizeRectanglePreview",
+	        key: 'resizeRectanglePreview',
 	        value: function resizeRectanglePreview(mousePos, layer) {
 	            this.setMousePosition(mousePos);
 	            var element = document.getElementById("preview-rectangle");
@@ -3836,13 +3587,13 @@
 	            }
 	        }
 	    }, {
-	        key: "removeRectanglePreview",
+	        key: 'removeRectanglePreview',
 	        value: function removeRectanglePreview() {
 	            var element = document.getElementById("preview-rectangle");
 	            if (element !== null) element.parentNode.removeChild(element);
 	        }
 	    }, {
-	        key: "isInPageBounds",
+	        key: 'isInPageBounds',
 	        value: function isInPageBounds(relativeX, relativeY) {
 	            var pageIndex = this.pixelInstance.core.getSettings().currentPageIndex,
 	                zoomLevel = this.pixelInstance.core.getSettings().zoomLevel,
@@ -3867,7 +3618,7 @@
 	         **/
 
 	    }, {
-	        key: "tutorial",
+	        key: 'tutorial',
 	        value: function tutorial() {
 	            var overlay = document.createElement('div');
 	            overlay.setAttribute("id", "tutorial-div");
@@ -3967,7 +3718,7 @@
 	}();
 
 /***/ }),
-/* 12 */
+/* 11 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4014,7 +3765,7 @@
 	}(PixelException);
 
 /***/ }),
-/* 13 */
+/* 12 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4120,7 +3871,7 @@
 	}();
 
 /***/ }),
-/* 14 */
+/* 13 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4216,7 +3967,7 @@
 	}();
 
 /***/ }),
-/* 15 */
+/* 14 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4352,7 +4103,7 @@
 	}();
 
 /***/ }),
-/* 16 */
+/* 15 */
 /***/ (function(module, exports) {
 
 	'use strict';

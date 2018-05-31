@@ -2,7 +2,6 @@ import {Rectangle} from './Pixel.js/source/rectangle';
 import {Point} from './Pixel.js/source/point';
 import {Layer} from './Pixel.js/source/layer';
 import {Colour} from './Pixel.js/source/colour';
-import {Export} from './Pixel.js/source/export';
 
 export class PixelWrapper
 {
@@ -29,13 +28,40 @@ export class PixelWrapper
         this.destroyButtons();
     }
 
+    /**
+     *  Creates the number of required layers based on the number of input ports in the Rodan job.
+     *  The variable numberInputLayers is defined in the outermost index.html 
+     */
     createLayers ()
     {
-        let layer2 = new Layer(2, new Colour(255, 51, 102, 1), "Layer 2", this.pixelInstance, 0.5),
-            layer3 = new Layer(3, new Colour(255, 255, 10, 1), "Layer 3", this.pixelInstance, 0.5);
+        // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
+        // so start at 2, and ignore one input layer which gets assigned to layer 1
+        for (var i = 2; i < numberInputLayers+1; i++) { 
+            let colour;
+            switch (i) {
+                case 2:
+                    colour = new Colour(255, 51, 102, 1);
+                    break;
+                case 3:
+                    colour = new Colour(255, 255, 10, 1);
+                    break;
+                case 4:
+                    colour = new Colour(2, 136, 0, 1);
+                    break;
+                case 5:
+                    colour = new Colour(96, 0, 186, 1);
+                    break;
+                case 6:
+                    colour = new Colour(239, 143, 0, 1);
+                    break;
+                case 7:
+                    colour = new Colour(71, 239, 200, 1);
+                    break;
+            }
+            let layer = new Layer(i, colour, "Layer " + i, this.pixelInstance, 0.5);
+            this.layers.push(layer);
+        }
 
-        this.layers.push(layer2);
-        this.layers.push(layer3);
         this.pixelInstance.layerIdCounter = this.layers.length+1;
     }
 
@@ -44,7 +70,7 @@ export class PixelWrapper
         let rodanExportButton = document.createElement("button"),
             rodanExportText = document.createTextNode("Submit To Rodan");
 
-        this.exportToRodan = () => { this.checkValid(); }; // This will call exportLayersToRodan when done
+        this.exportToRodan = () => { this.createBackgroundLayer(); }; // This will call exportLayersToRodan when done
 
         rodanExportButton.setAttribute("id", "rodan-export-button");
         rodanExportButton.appendChild(rodanExportText);
@@ -60,16 +86,6 @@ export class PixelWrapper
         rodanExportButton.parentNode.removeChild(rodanExportButton);
     }
 
-    checkValid ()
-    {
-        if (this.layers.length !== 3) { 
-            window.alert("You need to have exactly 3 layers for classification!");
-        } else {
-            this.layersCount = this.layers.length;
-            this.createBackgroundLayer();
-        }
-    }
-
     exportLayersToRodan ()
     {
         console.log("Exporting!");
@@ -82,12 +98,11 @@ export class PixelWrapper
             console.log(layer.layerId + " " + layer.layerName);
 
             let dataURL = layer.getCanvas().toDataURL();
-            urlList[layer.layerId] = dataURL;
+            urlList[layer.layerId] = dataURL; 
             count -= 1;
                 if (count === 0)
                 {
                     console.log(urlList);
-                    console.log(this.layers.length);
                     console.log("done");
 
                     $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
@@ -103,7 +118,11 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
-        let backgroundLayer = new Layer(this.layersCount+1, new Colour(242, 0, 242, 1), "Background Layer", 
+        this.layersCount = this.layers.length;
+
+        // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
+        // this backgroundLayer is only created upon submitting (so no conflicts)
+        let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer", 
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
             pageIndex = this.pageIndex, 
@@ -186,7 +205,7 @@ export class PixelWrapper
                 // Do nothing and wait until last layer has finished processing to cancel
             } else if (this.layersCount === 0) { // Done generating background layer
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-                this.layers.push(backgroundLayer);  
+                this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();
                 this.exportLayersToRodan();
             }
@@ -200,7 +219,6 @@ export class PixelWrapper
     {
         this.layers.forEach((layer) =>
         {
-            // Current implementation only supports 3 layers
             let img = document.getElementById("layer" + layer.layerId +"-img");
             if (img !== null)
             {
