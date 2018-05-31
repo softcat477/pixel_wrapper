@@ -34,14 +34,22 @@ export class PixelWrapper
      */
     createLayers ()
     {
+        // Set default tool to rectangle for Select Region layer. Once createPluginElements()
+        // is done, this will destroy the brush cursor and set the current tool to rectangle.
+        this.pixelInstance.tools.currentTool = "rectangle";
+
         // Only create default layers once 
         if (this.layers.length !== 1) {
             return;
         }
 
+        // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
+        let selectRegionLayer = new Layer(-1, new Colour(249, 224, 224, 1), "Select Region", this.pixelInstance, 0.3);
+        this.layers.unshift(selectRegionLayer);
+
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
         // so start at 2, and ignore one input layer which gets assigned to layer 1
-        for (var i = 2; i < numberInputLayers+1; i++) { 
+        for (var i = 2; i < numberInputLayers + 1; i++) { 
             let colour;
             switch (i) {
                 case 2:
@@ -67,7 +75,7 @@ export class PixelWrapper
             this.layers.push(layer);
         }
 
-        this.pixelInstance.layerIdCounter = this.layers.length+1;
+        this.pixelInstance.layerIdCounter = this.layers.length;
     }
 
     createButtons () 
@@ -94,6 +102,9 @@ export class PixelWrapper
     exportLayersToRodan ()
     {
         console.log("Exporting!");
+        
+        // Remove the "Select Region" layer which is always index 1
+        this.layers.splice(1, 1);
 
         let count = this.layers.length;
         let urlList = [];

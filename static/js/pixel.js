@@ -695,10 +695,9 @@
 
 	            this.uiManager.destroyPluginElements(this.layers, this.background);
 	            this.layers.splice(this.selectedLayerIndex, 1);
-	            this.layerIdCounter--;
 
-	            //reset to the last layer created on delete
-	            this.selectedLayerIndex = this.layerIdCounter - 2;
+	            //reset to the first layer on delete
+	            this.selectedLayerIndex = 0;
 
 	            //refreshing the layers view to reflect changes
 	            this.uiManager.createPluginElements(this.layers);
@@ -1227,10 +1226,18 @@
 	    }, {
 	        key: 'createLayers',
 	        value: function createLayers() {
+	            // Set default tool to rectangle for Select Region layer. Once createPluginElements()
+	            // is done, this will destroy the brush cursor and set the current tool to rectangle.
+	            this.pixelInstance.tools.currentTool = "rectangle";
+
 	            // Only create default layers once 
 	            if (this.layers.length !== 1) {
 	                return;
 	            }
+
+	            // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
+	            var selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(249, 224, 224, 1), "Select Region", this.pixelInstance, 0.3);
+	            this.layers.unshift(selectRegionLayer);
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
 	            // so start at 2, and ignore one input layer which gets assigned to layer 1
@@ -1260,7 +1267,7 @@
 	                this.layers.push(layer);
 	            }
 
-	            this.pixelInstance.layerIdCounter = this.layers.length + 1;
+	            this.pixelInstance.layerIdCounter = this.layers.length;
 	        }
 	    }, {
 	        key: 'createButtons',
@@ -1291,6 +1298,9 @@
 	        key: 'exportLayersToRodan',
 	        value: function exportLayersToRodan() {
 	            console.log("Exporting!");
+
+	            // Remove the "Select Region" layer which is always index 1
+	            this.layers.splice(1, 1);
 
 	            var count = this.layers.length;
 	            var urlList = [];
