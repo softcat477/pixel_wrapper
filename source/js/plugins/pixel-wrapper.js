@@ -34,9 +34,9 @@ export class PixelWrapper
      */
     createLayers ()
     {
-        let numberToAdd = numberInputLayers - 1; // There is 1 layer created by default
-
-        for (var i = 2; i < numberToAdd+2; i++) { 
+        // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
+        // so start at 2, and ignore one input layer which gets assigned to layer 1
+        for (var i = 2; i < numberInputLayers+1; i++) { 
             let colour;
             switch (i) {
                 case 2:

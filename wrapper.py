@@ -222,59 +222,22 @@ class PixelInteractive(RodanTask):
     ]
 
     def get_my_interface(self, inputs, settings):
-		# Get input.
+        # Get input.
         layer_urls = []
-        layer1_url = ''
-        layer2_url = ''
-        layer3_url = ''
-        layer4_url = ''
-        layer5_url = ''
-        layer6_url = ''
-        layer7_url = ''
 
         query_url = get_iiif_query(inputs['Image'][0]['resource_path'])
 
-        if 'PNG - Layer 1 Input' in inputs:
-            layer1_path = inputs['PNG - Layer 1 Input'][0]['resource_path']
-            layer1_url = media_file_path_to_public_url(layer1_path)
-            layer_urls.append(layer1_url)
+        for i in range(1, 8):
+            if 'PNG - Layer {} Input'.format(i) in inputs:
+                layer_path = inputs['PNG - Layer {} Input'.format(i)][0]['resource_path']
+                layer_urls.append(media_file_path_to_public_url(layer_path))
 
-        if 'PNG - Layer 2 Input' in inputs:
-            layer2_path = inputs['PNG - Layer 2 Input'][0]['resource_path']
-            layer2_url = media_file_path_to_public_url(layer2_path)
-            layer_urls.append(layer2_url)
-
-        if 'PNG - Layer 3 Input' in inputs:
-            layer3_path = inputs['PNG - Layer 3 Input'][0]['resource_path']
-            layer3_url = media_file_path_to_public_url(layer3_path)
-            layer_urls.append(layer3_url)
-
-        if 'PNG - Layer 4 Input' in inputs:
-            layer4_path = inputs['PNG - Layer 4 Input'][0]['resource_path']
-            layer4_url = media_file_path_to_public_url(layer4_path)
-            layer_urls.append(layer4_url)
-
-        if 'PNG - Layer 5 Input' in inputs:
-            layer5_path = inputs['PNG - Layer 5 Input'][0]['resource_path']
-            layer5_url = media_file_path_to_public_url(layer5_path)
-            layer_urls.append(layer5_url)
-
-        if 'PNG - Layer 6 Input' in inputs:
-            layer6_path = inputs['PNG - Layer 6 Input'][0]['resource_path']
-            layer6_url = media_file_path_to_public_url(layer6_path)
-            layer_urls.append(layer6_url)
-
-        if 'PNG - Layer 7 Input' in inputs:
-            layer7_path = inputs['PNG - Layer 7 Input'][0]['resource_path']
-            layer7_url = media_file_path_to_public_url(layer7_path)
-            layer_urls.append(layer7_url)
-
-    	# Create data to pass.
-    	data = {
-    		'json': create_json(inputs['Image'][0]['resource_path']),
+        # Create data to pass.
+        data = {
+            'json': create_json(inputs['Image'][0]['resource_path']),
             'layer_urls': layer_urls,
         }
-    	return ('index.html', data)
+        return ('index.html', data)
 
     def run_my_task(self, inputs, settings, outputs):
         if '@done' not in settings:
