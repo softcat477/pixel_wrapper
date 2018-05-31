@@ -34,6 +34,11 @@ export class PixelWrapper
      */
     createLayers ()
     {
+        // Only create default layers once 
+        if (this.layers.length !== 1) {
+            return;
+        }
+
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
         // so start at 2, and ignore one input layer which gets assigned to layer 1
         for (var i = 2; i < numberInputLayers+1; i++) { 
