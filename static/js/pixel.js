@@ -1207,6 +1207,7 @@
 	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
 	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
 	        this.exportInterrupted = false;
+	        this.selectRegionLayer;
 	    }
 
 	    _createClass(PixelWrapper, [{
@@ -1240,8 +1241,8 @@
 	            }
 
 	            // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
-	            var selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
-	            this.layers.unshift(selectRegionLayer);
+	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
+	            this.layers.unshift(this.selectRegionLayer);
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
 	            // so start at 2, and ignore one input layer which gets assigned to layer 1
@@ -1342,7 +1343,7 @@
 	            var _this2 = this;
 
 	            // Don't export selectRegionLayer to Rodan
-	            var selectRegionLayer = this.layers.shift();
+	            this.layers.shift();
 	            this.layersCount = this.layers.length;
 
 	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
@@ -1353,7 +1354,7 @@
 	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
 	            // Add select regions to backgroundLayer
-	            selectRegionLayer.shapes.forEach(function (shape) {
+	            this.selectRegionLayer.shapes.forEach(function (shape) {
 	                var x = shape.origin.getCoordsInPage(maxZoom).x,
 	                    y = shape.origin.getCoordsInPage(maxZoom).y,
 	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
@@ -1436,6 +1437,7 @@
 	                if (this.exportInterrupted && this.layersCount === 0) {
 	                    this.exportInterrupted = false;
 	                    this.uiManager.destroyExportElements();
+	                    this.layers.unshift(this.selectRegionLayer);
 	                } else if (this.exportInterrupted) {
 	                    // Do nothing and wait until last layer has finished processing to cancel
 	                } else if (this.layersCount === 0) {
