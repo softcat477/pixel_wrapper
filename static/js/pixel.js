@@ -90,6 +90,7 @@
 	    function PixelPlugin(core) {
 	        _classCallCheck(this, PixelPlugin);
 
+	        this.pixelWrapper = null;
 	        this.core = core;
 	        this.activated = false;
 	        this.pageToolsIcon = this.createIcon();
@@ -145,7 +146,7 @@
 	            if (this.tools === null) this.tools = new _tools.Tools(this);
 
 	            // Activate wrapper
-	            this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
+	            if (this.pixelWrapper === null) this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
 	            this.pixelWrapper.activate();
 
 	            this.uiManager.createPluginElements(this.layers);
