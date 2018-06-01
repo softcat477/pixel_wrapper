@@ -1349,17 +1349,19 @@
 	            // this backgroundLayer is only created upon submitting (so no conflicts)
 	            var backgroundLayer = new _layer.Layer(0, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                pageIndex = this.pageIndex,
-	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
 	            // Add select regions to backgroundLayer
 	            selectRegionLayer.shapes.forEach(function (shape) {
 	                var x = shape.origin.getCoordsInPage(maxZoom).x,
 	                    y = shape.origin.getCoordsInPage(maxZoom).y,
-	                    rectWidth = shape.relativeRectWidth * 2 ^ maxZoom,
-	                    rectHeight = shape.relativeRectHeight * 2 ^ maxZoom;
-	                var rect = new _rectangle.Rectangle(new _point.Point(x, y, pageIndex), rectWidth, rectHeight, "add");
+	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
+	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom);
+
+	                console.log("x: " + x + ", y: " + y + ", width: " + rectWidth + ", height: " + rectHeight);
+
+	                var rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 	                backgroundLayer.addShapeToLayer(rect);
 	            });
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
@@ -1375,14 +1377,14 @@
 	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
 	                layerCanvas.width = width;
 	                layerCanvas.height = height;
-	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
+	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, _this2.pageIndex);
 
-	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
 	            });
 	        }
 	    }, {
 	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
+	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height) {
 	            var _this3 = this;
 
 	            var chunkSize = width,
@@ -1390,17 +1392,17 @@
 	                row = 0,
 	                col = 0,
 	                pixelCtx = layerCanvas.getContext('2d');
+
 	            var doChunk = function doChunk() {
-	                // Use this method instead of nested for so UI isn't blocked
 	                var cnt = chunkSize;
 	                chunkNum++;
 	                while (cnt--) {
 	                    if (row >= height) break;
 	                    if (col < width) {
-	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
-	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-	                        if (colour.alpha !== 0) {
-	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
+	                        var data = pixelCtx.getImageData(col, row, 1, 1).data;
+	                        // data[3] is alpha
+	                        if (data[3] !== 0) {
+	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, _this3.pageIndex), 1, 1, "subtract");
 	                            backgroundLayer.addShapeToLayer(currentPixel);
 	                        }
 	                        col++;

@@ -143,18 +143,20 @@ export class PixelWrapper
         let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer", 
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-            pageIndex = this.pageIndex, 
-            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
         // Add select regions to backgroundLayer
         selectRegionLayer.shapes.forEach((shape) => {
             let x = shape.origin.getCoordsInPage(maxZoom).x,
                 y = shape.origin.getCoordsInPage(maxZoom).y,
-                rectWidth = shape.relativeRectWidth * 2^maxZoom,
-                rectHeight = shape.relativeRectHeight * 2^maxZoom;
-                let rect = new Rectangle(new Point(x, y, pageIndex), rectWidth, rectHeight, "add");
-                backgroundLayer.addShapeToLayer(rect);
+                rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
+                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom);
+
+            console.log("x: " + x + ", y: " + y + ", width: " + rectWidth + ", height: " + rectHeight);
+
+            let rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
+            backgroundLayer.addShapeToLayer(rect);
         });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
@@ -169,30 +171,31 @@ export class PixelWrapper
             layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
             layerCanvas.width = width;
             layerCanvas.height = height;
-            layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex); 
+            layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
-            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
         });
     }
 
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, pageIndex, width, height) 
+    subtractLayerFromBackground (backgroundLayer, layerCanvas, width, height) 
     {
         var chunkSize = width,
             chunkNum = 0,
             row = 0,
             col = 0,
             pixelCtx = layerCanvas.getContext('2d');
-        let doChunk = () => { // Use this method instead of nested for so UI isn't blocked
+
+        let doChunk = () => { 
             var cnt = chunkSize;
             chunkNum++;
             while (cnt--) { 
                 if (row >= height)
                     break;
                 if (col < width) {
-                    let data = pixelCtx.getImageData(col, row, 1, 1).data,
-                        colour = new Colour(data[0], data[1], data[2], data[3]);
-                    if (colour.alpha !== 0) { 
-                        let currentPixel = new Rectangle(new Point(col, row, pageIndex), 1, 1, "subtract");
+                    let data = pixelCtx.getImageData(col, row, 1, 1).data;
+                    // data[3] is alpha
+                    if (data[3] !== 0) { 
+                        let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
                     col++;
