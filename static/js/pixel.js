@@ -681,15 +681,19 @@
 	    }, {
 	        key: 'deleteLayer',
 	        value: function deleteLayer() {
+	            var layer = this.layers[this.selectedLayerIndex],
+	                currentLayersLength = this.layers.length;
+
 	            // Enable function only if in standalone Pixel or no input layers
 	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	                if (layer.layerId === -1) {
+	                    alert("The Select Region layer cannot be deleted!");
+	                    return;
+	                }
 	                // Continue
 	            } else {
 	                return;
 	            }
-
-	            var layer = this.layers[this.selectedLayerIndex],
-	                currentLayersLength = this.layers.length;
 
 	            if (currentLayersLength <= 1) throw new _exceptions.CannotDeleteLayerException("Must at least have one layer other than the background");
 
@@ -1615,8 +1619,16 @@
 
 	            // TODO: Use padded coordinates
 	            else if (this.blendMode === "add") {
-	                    if (pageIndex === this.origin.pageIndex) {
-	                        //Draw the rectangle
+	                    if (pageIndex === this.origin.pageIndex && layer.layerId === -1) // "Select Region" layer 
+	                        {
+	                            // Draw the rectangle with a border
+	                            ctx.fillStyle = layer.colour.toHTMLColour();
+	                            ctx.lineWidth = 1;
+	                            ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+	                            ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                            ctx.strokeRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                        } else if (pageIndex === this.origin.pageIndex) {
+	                        // Draw rectangle without border
 	                        ctx.fillStyle = layer.colour.toHTMLColour();
 	                        ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
 	                    }
@@ -4116,6 +4128,9 @@
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
 	                case this.type.erase:
+	                    this.pixelInstance.uiManager.destroyBrushCursor();
+	                    break;
+	                case this.type.rectangle:
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
 	                default:
