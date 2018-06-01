@@ -44,7 +44,7 @@ export class PixelWrapper
         }
 
         // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
-        let selectRegionLayer = new Layer(-1, new Colour(249, 224, 224, 1), "Select Region", this.pixelInstance, 0.3);
+        let selectRegionLayer = new Layer(-1, new Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
         this.layers.unshift(selectRegionLayer);
 
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
@@ -102,9 +102,6 @@ export class PixelWrapper
     exportLayersToRodan ()
     {
         console.log("Exporting!");
-        
-        // Remove the "Select Region" layer which is always index 1
-        this.layers.splice(1, 1);
 
         let count = this.layers.length;
         let urlList = [];
@@ -124,6 +121,9 @@ export class PixelWrapper
                     $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
                 }
         });
+
+        setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 100);
+        setTimeout(function(){ window.close(); }, 200);
     }
 
     /**
@@ -134,6 +134,8 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
+        // Don't export selectRegionLayer to Rodan
+        let selectRegionLayer = this.layers.shift();
         this.layersCount = this.layers.length;
 
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
@@ -145,9 +147,15 @@ export class PixelWrapper
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
             height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
 
-        // Highlight whole image for background layer
-        let rect = new Rectangle(new Point(0, 0, pageIndex), width, height, "add");
-        backgroundLayer.addShapeToLayer(rect);
+        // Add select regions to backgroundLayer
+        selectRegionLayer.shapes.forEach((shape) => {
+            let x = shape.origin.getCoordsInPage(maxZoom).x,
+                y = shape.origin.getCoordsInPage(maxZoom).y,
+                rectWidth = shape.relativeRectWidth * 2^maxZoom,
+                rectHeight = shape.relativeRectHeight * 2^maxZoom;
+                let rect = new Rectangle(new Point(x, y, pageIndex), rectWidth, rectHeight, "add");
+                backgroundLayer.addShapeToLayer(rect);
+        });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
         // Instantiate progress bar
