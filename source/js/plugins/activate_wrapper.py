@@ -11,10 +11,10 @@ deactivate_flag = True
 
 import_code = "import {PixelWrapper} from '../../pixel-wrapper';\n"
 construct_code = "\t\tthis.pixelWrapper = null;\n"
-activate_code = """\t\t// Activate wrapper
+activate_code = """\n\t\t// Activate wrapper
 \t\tif (this.pixelWrapper === null) 
 \t\t\tthis.pixelWrapper = new PixelWrapper(this);
-\t\tthis.pixelWrapper.activate();\n\n"""
+\t\tthis.pixelWrapper.activate();\n"""
 deactivate_code = "\t\t// Deactivate wrapper\n\t\tthis.pixelWrapper.deactivate();\n\n"
 
 if import_code in lines:
@@ -30,8 +30,8 @@ for i in range(len(lines)):
     if ('constructor' in lines[i] and construct_flag):
         lines.insert(i+2, construct_code)
         construct_flag = False
-    if ('this.uiManager.createPluginElements(this.layers);' in lines[i] and activate_flag):
-        lines.insert(i, activate_code)
+    if ('new Tutorial();' in lines[i] and activate_flag):
+        lines.insert(i+1, activate_code)
         activate_flag = False
     if ('deactivatePlugin ()' in lines[i] and deactivate_flag):
         lines.insert(i+2, deactivate_code)

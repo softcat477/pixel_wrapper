@@ -145,10 +145,6 @@
 
 	            if (this.tools === null) this.tools = new _tools.Tools(this);
 
-	            // Activate wrapper
-	            if (this.pixelWrapper === null) this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
-	            this.pixelWrapper.activate();
-
 	            this.uiManager.createPluginElements(this.layers);
 	            this.scrollEventHandle = this.subscribeToScrollEvent();
 	            this.zoomEventHandle = this.subscribeToZoomLevelWillChangeEvent();
@@ -163,6 +159,10 @@
 	            this.activated = true;
 
 	            new _tutorial.Tutorial();
+
+	            // Activate wrapper
+	            if (this.pixelWrapper === null) this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
+	            this.pixelWrapper.activate();
 	        }
 	    }, {
 	        key: 'deactivatePlugin',
@@ -685,12 +685,8 @@
 	            var layer = this.layers[this.selectedLayerIndex],
 	                currentLayersLength = this.layers.length;
 
-	            // Enable function only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
-	                if (layer.layerId === -1) {
-	                    alert("The Select Region layer cannot be deleted!");
-	                    return;
-	                }
+	            // Enable function only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                // Continue
 	            } else {
 	                return;
@@ -711,8 +707,8 @@
 	    }, {
 	        key: 'createLayer',
 	        value: function createLayer() {
-	            // Enable function only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable function only if in standalone Pixel
+	            if (typeof numberInputLayers === 'undefined') {
 	                // Continue
 	            } else {
 	                return;
@@ -1217,11 +1213,17 @@
 	            this.createLayers();
 	            this.createButtons();
 	            this.rodanImagesToCanvas();
+	            this.addToTutorial();
 	        }
 	    }, {
 	        key: 'deactivate',
 	        value: function deactivate() {
 	            this.destroyButtons();
+	        }
+	    }, {
+	        key: 'addToTutorial',
+	        value: function addToTutorial() {
+	            document.getElementById('modal-body').firstChild.nextSibling.innerHTML = 'Navigate to the page you would like to edit and click the Pixel.js icon to open the toolboxes and layers view. \n        Start by creating your classification regions within the Select Region layer, using only the rectangle tool. \n        This is where your classification should be confined. Ensure a thorough classification within this region.';
 	        }
 
 	        /**
@@ -1232,12 +1234,19 @@
 	    }, {
 	        key: 'createLayers',
 	        value: function createLayers() {
-	            // Set default tool to rectangle for Select Region layer
+	            // Set default tool to rectangle (for select region layer)
 	            this.pixelInstance.tools.currentTool = "rectangle";
 
-	            // Only create default layers once 
+	            // Only create default layers once
 	            if (this.layers.length !== 1) {
 	                return;
+	            }
+
+	            var numLayers = numberInputLayers;
+
+	            // Ask user how many layers to create if there's no input
+	            if (numberInputLayers === 0) {
+	                numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
 	            }
 
 	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
@@ -1245,7 +1254,7 @@
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
 	            // so start at 2, and ignore one input layer which gets assigned to layer 1
-	            for (var i = 2; i < numberInputLayers + 1; i++) {
+	            for (var i = 2; i < numLayers + 1; i++) {
 	                var colour = void 0;
 	                switch (i) {
 	                    case 2:
@@ -1272,6 +1281,10 @@
 	            }
 
 	            this.pixelInstance.layerIdCounter = this.layers.length;
+
+	            // Refresh UI 
+	            this.uiManager.destroyPluginElements(this.layers, this.pixelInstance.background);
+	            this.uiManager.createPluginElements(this.layers);
 	        }
 	    }, {
 	        key: 'createButtons',
@@ -1289,7 +1302,7 @@
 	            rodanExportButton.appendChild(rodanExportText);
 	            rodanExportButton.addEventListener("click", this.exportToRodan);
 
-	            document.body.appendChild(rodanExportButton);
+	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
 	        }
 	    }, {
 	        key: 'destroyButtons',
@@ -3133,8 +3146,8 @@
 	            this.placeLayerCanvasesInDiva(layers);
 	            this.createUndoButton();
 	            this.createRedoButton();
-	            // Enable buttons only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable buttons only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                this.createDeleteLayerButton();
 	                this.createCreateLayerButton();
 	            }
@@ -3150,8 +3163,8 @@
 	            this.destroyBrushSizeSelector();
 	            this.destroyUndoButton();
 	            this.destroyRedoButton();
-	            // Enable buttons only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable buttons only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                this.destroyDeleteLayerButton();
 	                this.destroyCreateLayerButton();
 	            }

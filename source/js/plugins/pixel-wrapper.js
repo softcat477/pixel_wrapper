@@ -22,11 +22,20 @@ export class PixelWrapper
         this.createLayers();
         this.createButtons();
         this.rodanImagesToCanvas();
+        this.addToTutorial();
     }
 
     deactivate ()
     {
         this.destroyButtons();
+    }
+
+    addToTutorial () 
+    {
+        document.getElementById('modal-body').firstChild.nextSibling.innerHTML = 
+        `Navigate to the page you would like to edit and click the Pixel.js icon to open the toolboxes and layers view. 
+        Start by creating your classification regions within the Select Region layer, using only the rectangle tool. 
+        This is where your classification should be confined. Ensure a thorough classification within this region.`;
     }
 
     /**
@@ -35,12 +44,20 @@ export class PixelWrapper
      */
     createLayers ()
     {
-        // Set default tool to rectangle for Select Region layer
+        // Set default tool to rectangle (for select region layer)
         this.pixelInstance.tools.currentTool = "rectangle";
 
-        // Only create default layers once 
+        // Only create default layers once
         if (this.layers.length !== 1) {
             return;
+        }
+
+        let numLayers = numberInputLayers;
+
+        // Ask user how many layers to create if there's no input
+        if (numberInputLayers === 0) {
+            numLayers = parseInt(prompt("How many layers will you classify?\n" +
+             "This must be the same number as the number of output ports.", 3));
         }
 
         this.selectRegionLayer = new Layer(-1, new Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
@@ -48,7 +65,7 @@ export class PixelWrapper
 
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
         // so start at 2, and ignore one input layer which gets assigned to layer 1
-        for (var i = 2; i < numberInputLayers + 1; i++) { 
+        for (var i = 2; i < numLayers + 1; i++) { 
             let colour;
             switch (i) {
                 case 2:
@@ -75,6 +92,10 @@ export class PixelWrapper
         }
 
         this.pixelInstance.layerIdCounter = this.layers.length;
+
+        // Refresh UI 
+        this.uiManager.destroyPluginElements(this.layers, this.pixelInstance.background);
+        this.uiManager.createPluginElements(this.layers);
     }
 
     createButtons () 
@@ -88,7 +109,7 @@ export class PixelWrapper
         rodanExportButton.appendChild(rodanExportText);
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
-        document.body.appendChild(rodanExportButton);
+        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));    
     }
 
     destroyButtons ()
