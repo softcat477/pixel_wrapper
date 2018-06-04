@@ -1232,8 +1232,7 @@
 	    }, {
 	        key: 'createLayers',
 	        value: function createLayers() {
-	            // Set default tool to rectangle for Select Region layer. Once createPluginElements()
-	            // is done, this will destroy the brush cursor and set the current tool to rectangle.
+	            // Set default tool to rectangle for Select Region layer
 	            this.pixelInstance.tools.currentTool = "rectangle";
 
 	            // Only create default layers once 
@@ -1241,7 +1240,6 @@
 	                return;
 	            }
 
-	            // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
 	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
 	            this.layers.unshift(this.selectRegionLayer);
 
@@ -1356,14 +1354,17 @@
 
 	            // Add select regions to backgroundLayer
 	            this.selectRegionLayer.shapes.forEach(function (shape) {
+	                // Get shape dimensions
 	                var x = shape.origin.getCoordsInPage(maxZoom).x,
 	                    y = shape.origin.getCoordsInPage(maxZoom).y,
 	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom);
+	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+	                    rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 
-	                console.log("x: " + x + ", y: " + y + ", width: " + rectWidth + ", height: " + rectHeight);
+	                if (shape.blendMode === "subtract") {
+	                    rect.changeBlendModeTo("subtract");
+	                }
 
-	                var rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 	                backgroundLayer.addShapeToLayer(rect);
 	            });
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());

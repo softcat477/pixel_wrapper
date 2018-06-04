@@ -35,8 +35,7 @@ export class PixelWrapper
      */
     createLayers ()
     {
-        // Set default tool to rectangle for Select Region layer. Once createPluginElements()
-        // is done, this will destroy the brush cursor and set the current tool to rectangle.
+        // Set default tool to rectangle for Select Region layer
         this.pixelInstance.tools.currentTool = "rectangle";
 
         // Only create default layers once 
@@ -44,7 +43,6 @@ export class PixelWrapper
             return;
         }
 
-        // Select Region layer. Will be 2nd element in array after backgroundLayer is added.
         this.selectRegionLayer = new Layer(-1, new Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
         this.layers.unshift(this.selectRegionLayer);
 
@@ -149,14 +147,17 @@ export class PixelWrapper
 
         // Add select regions to backgroundLayer
         this.selectRegionLayer.shapes.forEach((shape) => {
+            // Get shape dimensions
             let x = shape.origin.getCoordsInPage(maxZoom).x,
                 y = shape.origin.getCoordsInPage(maxZoom).y,
                 rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom);
+                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+                rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
-            console.log("x: " + x + ", y: " + y + ", width: " + rectWidth + ", height: " + rectHeight);
+            if (shape.blendMode === "subtract") { 
+                rect.changeBlendModeTo("subtract");
+            }
 
-            let rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
             backgroundLayer.addShapeToLayer(rect);
         });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
