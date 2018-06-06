@@ -1213,7 +1213,7 @@
 	            this.createLayers();
 	            this.createButtons();
 	            this.rodanImagesToCanvas();
-	            this.addToTutorial();
+	            this.createHelpBox();
 	        }
 	    }, {
 	        key: 'deactivate',
@@ -1221,9 +1221,23 @@
 	            this.destroyButtons();
 	        }
 	    }, {
-	        key: 'addToTutorial',
-	        value: function addToTutorial() {
-	            document.getElementById('modal-body').firstChild.nextSibling.innerHTML = 'Navigate to the page you would like to edit and click the Pixel.js icon to open the toolboxes and layers view. \n        Start by creating your classification regions within the Select Region layer, using only the rectangle tool. \n        This is where your classification should be confined. Ensure a thorough classification within this region.';
+	        key: 'createHelpBox',
+	        value: function createHelpBox() {
+	            // Create help box next to selectRegionLayer selector
+	            var selectRegionLayerBox = document.getElementById("layer--1-selector");
+
+	            var helpDiv = document.createElement("div"),
+	                helpText = document.createTextNode("?"),
+	                tooltipDiv = document.createElement("div"),
+	                tooltipText = document.createTextNode("While in the Select Region Layer, use the " + "rectangle tool to select the regions of the page that you will classify. " + "Once you select these regions, select another layer and begin classifying! " + "Make sure to stay within the bounds of the region.");
+
+	            helpDiv.setAttribute("class", "tooltip");
+	            helpDiv.appendChild(helpText);
+	            tooltipDiv.setAttribute("class", "tooltiptext");
+	            tooltipDiv.appendChild(tooltipText);
+
+	            helpDiv.appendChild(tooltipDiv);
+	            selectRegionLayerBox.appendChild(helpDiv);
 	        }
 
 	        /**
@@ -1249,7 +1263,7 @@
 	                numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
 	            }
 
-	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(227, 231, 255, 1), "Select Region", this.pixelInstance, 0.3);
+	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
 	            this.layers.unshift(this.selectRegionLayer);
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
