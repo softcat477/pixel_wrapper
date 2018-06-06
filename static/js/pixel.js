@@ -1430,7 +1430,7 @@
 	                    if (row >= height) break;
 	                    if (col < width) {
 	                        var data = pixelCtx.getImageData(col, row, 1, 1).data;
-	                        // data[3] is alpha
+	                        // data is RGBA for one pixel, data[3] is alpha
 	                        if (data[3] !== 0) {
 	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, _this3.pageIndex), 1, 1, "subtract");
 	                            backgroundLayer.addShapeToLayer(currentPixel);

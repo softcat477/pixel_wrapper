@@ -230,7 +230,7 @@ export class PixelWrapper
                     break;
                 if (col < width) {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
-                    // data[3] is alpha
+                    // data is RGBA for one pixel, data[3] is alpha
                     if (data[3] !== 0) { 
                         let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
