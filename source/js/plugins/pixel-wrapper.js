@@ -22,7 +22,7 @@ export class PixelWrapper
         this.createLayers();
         this.createButtons();
         this.rodanImagesToCanvas();
-        this.createHelpBox();
+        this.createTooltip();
     }
 
     deactivate ()
@@ -30,7 +30,7 @@ export class PixelWrapper
         this.destroyButtons();
     }
 
-    createHelpBox ()
+    createTooltip ()
     {
         // Create help box next to selectRegionLayer selector
         let selectRegionLayerBox = document.getElementById("layer--1-selector");
@@ -70,8 +70,10 @@ export class PixelWrapper
 
         // Ask user how many layers to create if there's no input
         if (numberInputLayers === 0) {
-            numLayers = parseInt(prompt("How many layers will you classify?\n" +
-             "This must be the same number as the number of output ports.", 3));
+            while (numLayers <= 0 || numLayers > 7) {
+                numLayers = parseInt(prompt("How many layers will you classify?\n" +
+                "This must be the same number as the number of output ports.", 3));
+            }
         }
 
         this.selectRegionLayer = new Layer(-1, new Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
@@ -178,11 +180,14 @@ export class PixelWrapper
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
             height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
-            regions = this.selectRegionLayer.shapes,
-            addRegionsCount = 0;
+            selectRegions = this.selectRegionLayer.shapes,
+            regionsInfo = { // For progress method calculations
+                count: 0, // Number of "add" regions
+                sumHeight: 0 
+            };
 
         // Add select regions to backgroundLayer
-            regions.forEach((region) => {
+        selectRegions.forEach((region) => {
             // Get shape dimensions
             let x = region.origin.getCoordsInPage(maxZoom).x,
                 y = region.origin.getCoordsInPage(maxZoom).y,
@@ -192,18 +197,26 @@ export class PixelWrapper
 
             if (region.blendMode === "subtract") { 
                 rect.changeBlendModeTo("subtract");
-            } else {
-                addRegionsCount++;
+            } else { 
+                regionsInfo.count++;
+                regionsInfo.sumHeight += rectHeight;
             }
 
             backgroundLayer.addShapeToLayer(rect);
         });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
+        // Alert and return if user hasn't created a selection region
+        if (regionsInfo.count === 0) {
+            alert("You haven't created any select regions!");
+            this.layers.unshift(this.selectRegionLayer);
+            return;
+        }
+
         // Instantiate progress bar
         this.uiManager.createExportElements(this);
 
-        this.layersCount = this.layers.length * addRegionsCount;
+        this.layersCount = this.layers.length * regionsInfo.count;
         this.layers.forEach((layer) => {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
@@ -214,33 +227,40 @@ export class PixelWrapper
             layerCanvas.height = height;
             layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
-            for (var i = 0; i < regions.length; i++) {
-                if (regions[i].blendMode === "add") {
-                    let x = regions[i].origin.getCoordsInPage(maxZoom).x,
-                        y = regions[i].origin.getCoordsInPage(maxZoom).y,
-                        width = regions[i].relativeRectWidth * Math.pow(2, maxZoom),
-                        height = regions[i].relativeRectHeight * Math.pow(2, maxZoom);
-                    this.subtractLayerFromBackground(backgroundLayer, layerCanvas, x, y, width, height);
+            // Go over every selection region and subtract layer within this region from background
+            for (var i = 0; i < selectRegions.length; i++) {
+                let region = selectRegions[i];
+                if (region.blendMode !== "add") {
+                    continue;
                 }
+                let dimensions = {
+                    x: region.origin.getCoordsInPage(maxZoom).x,
+                    y: region.origin.getCoordsInPage(maxZoom).y,
+                    width: region.relativeRectWidth * Math.pow(2, maxZoom),
+                    height: region.relativeRectHeight * Math.pow(2, maxZoom)
+                };  
+                this.subtractLayerFromBackground(backgroundLayer, layerCanvas, dimensions, regionsInfo);    
             }
         });
     }
 
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, x, y, width, height) 
+    subtractLayerFromBackground (backgroundLayer, layerCanvas, dimensions, regionsInfo) 
     {
-        var chunkSize = width,
-            chunkNum = 0,
-            row = y,
-            col = x,
+        var chunkSize = dimensions.width,
+            chunkNum = 0, 
+            row = dimensions.y,
+            col = dimensions.x,
+            relHeight = dimensions.y + dimensions.height, 
+            relWidth = dimensions.x + dimensions.width,
             pixelCtx = layerCanvas.getContext('2d');
 
         let doChunk = () => { 
             var cnt = chunkSize;
             chunkNum++;
             while (cnt--) { 
-                if (row >= height + y)
+                if (row >= relHeight)
                     break;
-                if (col < width + x) {
+                if (col < relWidth) {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
                     // data is RGBA for one pixel, data[3] is alpha
                     if (data[3] !== 0) { 
@@ -251,27 +271,28 @@ export class PixelWrapper
                 }
                 else { // Reached end of row, jump to next
                     row++;
-                    col = x;
+                    col = dimensions.x;
                 }
             }
-            if (this.progress(row, chunkSize, chunkNum, height + y, backgroundLayer).needsRecall) { // recall function
+            // If progress not complete, recall this function
+            if (this.progress(row, chunkSize, chunkNum, relHeight, backgroundLayer, regionsInfo).incomplete) { 
                 setTimeout(doChunk, 1); 
             }
         };  
         doChunk();
     }
 
-    progress (row, chunkSize, chunkNum, height, backgroundLayer) 
+    progress (row, chunkSize, chunkNum, relHeight, backgroundLayer, regionsInfo) 
     {
-        if (row === height || this.exportInterrupted) {
+        if (row === relHeight || this.exportInterrupted) {
             this.layersCount -= 1;
         }
-        if (row < height && !this.exportInterrupted) {
-            let percentage = (chunkNum * chunkSize) * 100 / (height * chunkSize),
+        if (row < relHeight && !this.exportInterrupted) {
+            let percentage = (regionsInfo.count * chunkNum * chunkSize) * 100 / (regionsInfo.sumHeight * chunkSize),
                 roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
             this.pixelInstance.uiManager.updateProgress(roundedPercentage);
             return {
-                needsRecall: true
+                incomplete: true
             };
         } else {
             if (this.exportInterrupted && (this.layersCount === 0)) {
@@ -284,7 +305,7 @@ export class PixelWrapper
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();
-                // this.exportLayersToRodan();
+                this.exportLayersToRodan();
             }
         }
         return {
