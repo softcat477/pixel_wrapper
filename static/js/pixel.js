@@ -1199,7 +1199,7 @@
 
 	        this.pixelInstance = pixelInstance;
 	        this.layers = pixelInstance.layers;
-	        this.layersCount;
+	        this.totalRegionCount;
 	        this.uiManager = pixelInstance.uiManager;
 	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
 	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
@@ -1239,6 +1239,31 @@
 	            helpDiv.appendChild(tooltipDiv);
 	            selectRegionLayerBox.appendChild(helpDiv);
 	        }
+	    }, {
+	        key: 'createButtons',
+	        value: function createButtons() {
+	            var _this = this;
+
+	            var rodanExportButton = document.createElement("button"),
+	                rodanExportText = document.createTextNode("Submit To Rodan");
+
+	            this.exportToRodan = function () {
+	                _this.createBackgroundLayer();
+	            }; // This will call exportLayersToRodan when done
+
+	            rodanExportButton.setAttribute("id", "rodan-export-button");
+	            rodanExportButton.appendChild(rodanExportText);
+	            rodanExportButton.addEventListener("click", this.exportToRodan);
+
+	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
+	        }
+	    }, {
+	        key: 'destroyButtons',
+	        value: function destroyButtons() {
+	            var rodanExportButton = document.getElementById("rodan-export-button");
+
+	            rodanExportButton.parentNode.removeChild(rodanExportButton);
+	        }
 
 	        /**
 	         *  Creates the number of required layers based on the number of input ports in the Rodan job.
@@ -1269,7 +1294,7 @@
 	            this.layers.unshift(this.selectRegionLayer);
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
-	            // so start at 2, and ignore one input layer which gets assigned to layer 1
+	            // so start at 2, and ignore one input layer which gets assigned to layer 1. Max 7 input
 	            for (var i = 2; i < numLayers + 1; i++) {
 	                var colour = void 0;
 	                switch (i) {
@@ -1303,31 +1328,6 @@
 	            this.uiManager.createPluginElements(this.layers);
 	        }
 	    }, {
-	        key: 'createButtons',
-	        value: function createButtons() {
-	            var _this = this;
-
-	            var rodanExportButton = document.createElement("button"),
-	                rodanExportText = document.createTextNode("Submit To Rodan");
-
-	            this.exportToRodan = function () {
-	                _this.createBackgroundLayer();
-	            }; // This will call exportLayersToRodan when done
-
-	            rodanExportButton.setAttribute("id", "rodan-export-button");
-	            rodanExportButton.appendChild(rodanExportText);
-	            rodanExportButton.addEventListener("click", this.exportToRodan);
-
-	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
-	        }
-	    }, {
-	        key: 'destroyButtons',
-	        value: function destroyButtons() {
-	            var rodanExportButton = document.getElementById("rodan-export-button");
-
-	            rodanExportButton.parentNode.removeChild(rodanExportButton);
-	        }
-	    }, {
 	        key: 'exportLayersToRodan',
 	        value: function exportLayersToRodan() {
 	            console.log("Exporting!");
@@ -1350,6 +1350,7 @@
 	                }
 	            });
 
+	            // Alert and close Pixel after submitting
 	            setTimeout(function () {
 	                alert("Submission successful! Click OK to exit Pixel.js.");
 	            }, 100);
@@ -1359,10 +1360,9 @@
 	        }
 
 	        /**
-	         *  Generates a background layer by iterating over all the pixel data for each layer and 
-	         *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
-	         *  replicates what the exportLayersAsImageData function does but for generating the background
-	         *  layer, and there are numerous (albeit small) differences that requires a new function
+	         *  Generates a background layer by iterating over all the pixel data for each layer within the
+	         *  selection regions, and subtracting it from the background layer if the data is 
+	         *  non-transparent (alpha != 0). Uses the uiManager progress bar and exports to Rodan when done
 	         */
 
 	    }, {
@@ -1382,10 +1382,10 @@
 	                selectRegions = this.selectRegionLayer.shapes,
 	                regionsInfo = { // For progress method calculations
 	                count: 0, // Number of "add" regions
-	                sumHeight: 0
+	                sumHeight: 0 // Sum of all "add" regions
 	            };
 
-	            // Add select regions to backgroundLayer
+	            // Add selection regions to the backgroundLayer
 	            selectRegions.forEach(function (region) {
 	                // Get shape dimensions
 	                var x = region.origin.getCoordsInPage(maxZoom).x,
@@ -1414,8 +1414,9 @@
 
 	            // Instantiate progress bar
 	            this.uiManager.createExportElements(this);
+	            // Total number of regions to iterate over (over all layers)
+	            this.totalRegionCount = this.layers.length * regionsInfo.count;
 
-	            this.layersCount = this.layers.length * regionsInfo.count;
 	            this.layers.forEach(function (layer) {
 	                // Create layer canvas and draw (so pixel data can be accessed)
 	                var layerCanvas = document.createElement('canvas');
@@ -1449,18 +1450,20 @@
 
 	            var chunkSize = dimensions.width,
 	                chunkNum = 0,
-	                row = dimensions.y,
 	                col = dimensions.x,
-	                relHeight = dimensions.y + dimensions.height,
-	                relWidth = dimensions.x + dimensions.width,
+	                row = dimensions.y,
+
+	            // Height and width relative to the origin point (col, row)
+	            width = col + dimensions.width,
+	                height = row + dimensions.height,
 	                pixelCtx = layerCanvas.getContext('2d');
 
 	            var doChunk = function doChunk() {
 	                var cnt = chunkSize;
 	                chunkNum++;
 	                while (cnt--) {
-	                    if (row >= relHeight) break;
-	                    if (col < relWidth) {
+	                    if (row >= height) break;
+	                    if (col < width) {
 	                        var data = pixelCtx.getImageData(col, row, 1, 1).data;
 	                        // data is RGBA for one pixel, data[3] is alpha
 	                        if (data[3] !== 0) {
@@ -1475,7 +1478,7 @@
 	                    }
 	                }
 	                // If progress not complete, recall this function
-	                if (_this3.progress(row, chunkSize, chunkNum, relHeight, backgroundLayer, regionsInfo).incomplete) {
+	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) {
 	                    setTimeout(doChunk, 1);
 	                }
 	            };
@@ -1483,11 +1486,11 @@
 	        }
 	    }, {
 	        key: 'progress',
-	        value: function progress(row, chunkSize, chunkNum, relHeight, backgroundLayer, regionsInfo) {
-	            if (row === relHeight || this.exportInterrupted) {
-	                this.layersCount -= 1;
+	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo) {
+	            if (row === height || this.exportInterrupted) {
+	                this.totalRegionCount -= 1;
 	            }
-	            if (row < relHeight && !this.exportInterrupted) {
+	            if (row < height && !this.exportInterrupted) {
 	                var percentage = regionsInfo.count * chunkNum * chunkSize * 100 / (regionsInfo.sumHeight * chunkSize),
 	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
 	                this.pixelInstance.uiManager.updateProgress(roundedPercentage);
@@ -1495,13 +1498,13 @@
 	                    incomplete: true
 	                };
 	            } else {
-	                if (this.exportInterrupted && this.layersCount === 0) {
+	                if (this.exportInterrupted && this.totalRegionCount === 0) {
 	                    this.exportInterrupted = false;
 	                    this.uiManager.destroyExportElements();
 	                    this.layers.unshift(this.selectRegionLayer);
 	                } else if (this.exportInterrupted) {
 	                    // Do nothing and wait until last layer has finished processing to cancel
-	                } else if (this.layersCount === 0) {
+	                } else if (this.totalRegionCount === 0) {
 	                    // Done generating background layer
 	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
 	                    this.layers.unshift(backgroundLayer);
@@ -1513,6 +1516,11 @@
 	                needsRecall: false
 	            };
 	        }
+
+	        /**
+	         *  Handles the Rodan input layers and draws them on each layer in Pixel 
+	         */
+
 	    }, {
 	        key: 'rodanImagesToCanvas',
 	        value: function rodanImagesToCanvas() {
