@@ -9,7 +9,7 @@ export class PixelWrapper
     {
         this.pixelInstance = pixelInstance;
         this.layers = pixelInstance.layers;
-        this.layersCount = this.layers.length;
+        this.layersCount;
         this.uiManager = pixelInstance.uiManager;
         this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
         this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
@@ -170,7 +170,6 @@ export class PixelWrapper
     {
         // Don't export selectRegionLayer to Rodan
         this.layers.shift();
-        this.layersCount = this.layers.length;
 
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
         // this backgroundLayer is only created upon submitting (so no conflicts)
@@ -178,19 +177,23 @@ export class PixelWrapper
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
+            regions = this.selectRegionLayer.shapes,
+            addRegionsCount = 0;
 
         // Add select regions to backgroundLayer
-        this.selectRegionLayer.shapes.forEach((shape) => {
+            regions.forEach((region) => {
             // Get shape dimensions
-            let x = shape.origin.getCoordsInPage(maxZoom).x,
-                y = shape.origin.getCoordsInPage(maxZoom).y,
-                rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+            let x = region.origin.getCoordsInPage(maxZoom).x,
+                y = region.origin.getCoordsInPage(maxZoom).y,
+                rectWidth = region.relativeRectWidth * Math.pow(2, maxZoom),
+                rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
                 rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
-            if (shape.blendMode === "subtract") { 
+            if (region.blendMode === "subtract") { 
                 rect.changeBlendModeTo("subtract");
+            } else {
+                addRegionsCount++;
             }
 
             backgroundLayer.addShapeToLayer(rect);
@@ -200,6 +203,7 @@ export class PixelWrapper
         // Instantiate progress bar
         this.uiManager.createExportElements(this);
 
+        this.layersCount = this.layers.length * addRegionsCount;
         this.layers.forEach((layer) => {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
@@ -210,25 +214,33 @@ export class PixelWrapper
             layerCanvas.height = height;
             layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
-            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
+            for (var i = 0; i < regions.length; i++) {
+                if (regions[i].blendMode === "add") {
+                    let x = regions[i].origin.getCoordsInPage(maxZoom).x,
+                        y = regions[i].origin.getCoordsInPage(maxZoom).y,
+                        width = regions[i].relativeRectWidth * Math.pow(2, maxZoom),
+                        height = regions[i].relativeRectHeight * Math.pow(2, maxZoom);
+                    this.subtractLayerFromBackground(backgroundLayer, layerCanvas, x, y, width, height);
+                }
+            }
         });
     }
 
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, width, height) 
+    subtractLayerFromBackground (backgroundLayer, layerCanvas, x, y, width, height) 
     {
         var chunkSize = width,
             chunkNum = 0,
-            row = 0,
-            col = 0,
+            row = y,
+            col = x,
             pixelCtx = layerCanvas.getContext('2d');
 
         let doChunk = () => { 
             var cnt = chunkSize;
             chunkNum++;
             while (cnt--) { 
-                if (row >= height)
+                if (row >= height + y)
                     break;
-                if (col < width) {
+                if (col < width + x) {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
                     // data is RGBA for one pixel, data[3] is alpha
                     if (data[3] !== 0) { 
@@ -239,10 +251,10 @@ export class PixelWrapper
                 }
                 else { // Reached end of row, jump to next
                     row++;
-                    col = 0;
+                    col = x;
                 }
             }
-            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) { // recall function
+            if (this.progress(row, chunkSize, chunkNum, height + y, backgroundLayer).needsRecall) { // recall function
                 setTimeout(doChunk, 1); 
             }
         };  
@@ -272,7 +284,7 @@ export class PixelWrapper
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();
-                this.exportLayersToRodan();
+                // this.exportLayersToRodan();
             }
         }
         return {

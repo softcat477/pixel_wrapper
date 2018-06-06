@@ -1199,7 +1199,7 @@
 
 	        this.pixelInstance = pixelInstance;
 	        this.layers = pixelInstance.layers;
-	        this.layersCount = this.layers.length;
+	        this.layersCount;
 	        this.uiManager = pixelInstance.uiManager;
 	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
 	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
@@ -1370,26 +1370,29 @@
 
 	            // Don't export selectRegionLayer to Rodan
 	            this.layers.shift();
-	            this.layersCount = this.layers.length;
 
 	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
 	            // this backgroundLayer is only created upon submitting (so no conflicts)
 	            var backgroundLayer = new _layer.Layer(0, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
+	                regions = this.selectRegionLayer.shapes,
+	                addRegionsCount = 0;
 
 	            // Add select regions to backgroundLayer
-	            this.selectRegionLayer.shapes.forEach(function (shape) {
+	            regions.forEach(function (region) {
 	                // Get shape dimensions
-	                var x = shape.origin.getCoordsInPage(maxZoom).x,
-	                    y = shape.origin.getCoordsInPage(maxZoom).y,
-	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+	                var x = region.origin.getCoordsInPage(maxZoom).x,
+	                    y = region.origin.getCoordsInPage(maxZoom).y,
+	                    rectWidth = region.relativeRectWidth * Math.pow(2, maxZoom),
+	                    rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
 	                    rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 
-	                if (shape.blendMode === "subtract") {
+	                if (region.blendMode === "subtract") {
 	                    rect.changeBlendModeTo("subtract");
+	                } else {
+	                    addRegionsCount++;
 	                }
 
 	                backgroundLayer.addShapeToLayer(rect);
@@ -1399,6 +1402,7 @@
 	            // Instantiate progress bar
 	            this.uiManager.createExportElements(this);
 
+	            this.layersCount = this.layers.length * addRegionsCount;
 	            this.layers.forEach(function (layer) {
 	                // Create layer canvas and draw (so pixel data can be accessed)
 	                var layerCanvas = document.createElement('canvas');
@@ -1409,26 +1413,34 @@
 	                layerCanvas.height = height;
 	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, _this2.pageIndex);
 
-	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
+	                for (var i = 0; i < regions.length; i++) {
+	                    if (regions[i].blendMode === "add") {
+	                        var x = regions[i].origin.getCoordsInPage(maxZoom).x,
+	                            y = regions[i].origin.getCoordsInPage(maxZoom).y,
+	                            _width = regions[i].relativeRectWidth * Math.pow(2, maxZoom),
+	                            _height = regions[i].relativeRectHeight * Math.pow(2, maxZoom);
+	                        _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, x, y, _width, _height);
+	                    }
+	                }
 	            });
 	        }
 	    }, {
 	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height) {
+	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, x, y, width, height) {
 	            var _this3 = this;
 
 	            var chunkSize = width,
 	                chunkNum = 0,
-	                row = 0,
-	                col = 0,
+	                row = y,
+	                col = x,
 	                pixelCtx = layerCanvas.getContext('2d');
 
 	            var doChunk = function doChunk() {
 	                var cnt = chunkSize;
 	                chunkNum++;
 	                while (cnt--) {
-	                    if (row >= height) break;
-	                    if (col < width) {
+	                    if (row >= height + y) break;
+	                    if (col < width + x) {
 	                        var data = pixelCtx.getImageData(col, row, 1, 1).data;
 	                        // data is RGBA for one pixel, data[3] is alpha
 	                        if (data[3] !== 0) {
@@ -1439,10 +1451,10 @@
 	                    } else {
 	                        // Reached end of row, jump to next
 	                        row++;
-	                        col = 0;
+	                        col = x;
 	                    }
 	                }
-	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
+	                if (_this3.progress(row, chunkSize, chunkNum, height + y, backgroundLayer).needsRecall) {
 	                    // recall function
 	                    setTimeout(doChunk, 1);
 	                }
@@ -1474,7 +1486,7 @@
 	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
 	                    this.layers.unshift(backgroundLayer);
 	                    this.uiManager.destroyExportElements();
-	                    this.exportLayersToRodan();
+	                    // this.exportLayersToRodan();
 	                }
 	            }
 	            return {
