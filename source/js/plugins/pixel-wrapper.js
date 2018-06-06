@@ -14,6 +14,7 @@ export class PixelWrapper
         this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
         this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
         this.exportInterrupted = false;
+        this.selectRegionLayer;
     }
 
     activate ()
@@ -21,11 +22,34 @@ export class PixelWrapper
         this.createLayers();
         this.createButtons();
         this.rodanImagesToCanvas();
+        this.createHelpBox();
     }
 
     deactivate ()
     {
         this.destroyButtons();
+    }
+
+    createHelpBox ()
+    {
+        // Create help box next to selectRegionLayer selector
+        let selectRegionLayerBox = document.getElementById("layer--1-selector");
+
+        let helpDiv = document.createElement("div"),
+            helpText = document.createTextNode("?"),
+            tooltipDiv = document.createElement("div"),
+            tooltipText = document.createTextNode("While in the Select Region Layer, use the " +
+            "rectangle tool to select the regions of the page that you will classify. " +
+            "Once you select these regions, select another layer and begin classifying! " + 
+            "Make sure to stay within the bounds of the region.");
+
+        helpDiv.setAttribute("class", "tooltip");
+        helpDiv.appendChild(helpText);
+        tooltipDiv.setAttribute("class", "tooltiptext");
+        tooltipDiv.appendChild(tooltipText);
+
+        helpDiv.appendChild(tooltipDiv);
+        selectRegionLayerBox.appendChild(helpDiv);
     }
 
     /**
@@ -34,14 +58,28 @@ export class PixelWrapper
      */
     createLayers ()
     {
-        // Only create default layers once 
+        // Set default tool to rectangle (for select region layer)
+        this.pixelInstance.tools.currentTool = "rectangle";
+
+        // Only create default layers once
         if (this.layers.length !== 1) {
             return;
         }
 
+        let numLayers = numberInputLayers;
+
+        // Ask user how many layers to create if there's no input
+        if (numberInputLayers === 0) {
+            numLayers = parseInt(prompt("How many layers will you classify?\n" +
+             "This must be the same number as the number of output ports.", 3));
+        }
+
+        this.selectRegionLayer = new Layer(-1, new Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
+        this.layers.unshift(this.selectRegionLayer);
+
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
         // so start at 2, and ignore one input layer which gets assigned to layer 1
-        for (var i = 2; i < numberInputLayers+1; i++) { 
+        for (var i = 2; i < numLayers + 1; i++) { 
             let colour;
             switch (i) {
                 case 2:
@@ -67,7 +105,11 @@ export class PixelWrapper
             this.layers.push(layer);
         }
 
-        this.pixelInstance.layerIdCounter = this.layers.length+1;
+        this.pixelInstance.layerIdCounter = this.layers.length;
+
+        // Refresh UI 
+        this.uiManager.destroyPluginElements(this.layers, this.pixelInstance.background);
+        this.uiManager.createPluginElements(this.layers);
     }
 
     createButtons () 
@@ -81,7 +123,7 @@ export class PixelWrapper
         rodanExportButton.appendChild(rodanExportText);
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
-        document.body.appendChild(rodanExportButton);
+        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));    
     }
 
     destroyButtons ()
@@ -113,6 +155,9 @@ export class PixelWrapper
                     $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
                 }
         });
+
+        setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 100);
+        setTimeout(function(){ window.close(); }, 200);
     }
 
     /**
@@ -123,6 +168,8 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
+        // Don't export selectRegionLayer to Rodan
+        this.layers.shift();
         this.layersCount = this.layers.length;
 
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
@@ -130,13 +177,24 @@ export class PixelWrapper
         let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer", 
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-            pageIndex = this.pageIndex, 
-            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
-        // Highlight whole image for background layer
-        let rect = new Rectangle(new Point(0, 0, pageIndex), width, height, "add");
-        backgroundLayer.addShapeToLayer(rect);
+        // Add select regions to backgroundLayer
+        this.selectRegionLayer.shapes.forEach((shape) => {
+            // Get shape dimensions
+            let x = shape.origin.getCoordsInPage(maxZoom).x,
+                y = shape.origin.getCoordsInPage(maxZoom).y,
+                rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
+                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+                rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
+
+            if (shape.blendMode === "subtract") { 
+                rect.changeBlendModeTo("subtract");
+            }
+
+            backgroundLayer.addShapeToLayer(rect);
+        });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
         // Instantiate progress bar
@@ -150,30 +208,31 @@ export class PixelWrapper
             layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
             layerCanvas.width = width;
             layerCanvas.height = height;
-            layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex); 
+            layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
-            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
         });
     }
 
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, pageIndex, width, height) 
+    subtractLayerFromBackground (backgroundLayer, layerCanvas, width, height) 
     {
         var chunkSize = width,
             chunkNum = 0,
             row = 0,
             col = 0,
             pixelCtx = layerCanvas.getContext('2d');
-        let doChunk = () => { // Use this method instead of nested for so UI isn't blocked
+
+        let doChunk = () => { 
             var cnt = chunkSize;
             chunkNum++;
             while (cnt--) { 
                 if (row >= height)
                     break;
                 if (col < width) {
-                    let data = pixelCtx.getImageData(col, row, 1, 1).data,
-                        colour = new Colour(data[0], data[1], data[2], data[3]);
-                    if (colour.alpha !== 0) { 
-                        let currentPixel = new Rectangle(new Point(col, row, pageIndex), 1, 1, "subtract");
+                    let data = pixelCtx.getImageData(col, row, 1, 1).data;
+                    // data is RGBA for one pixel, data[3] is alpha
+                    if (data[3] !== 0) { 
+                        let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
                     col++;
@@ -206,6 +265,7 @@ export class PixelWrapper
             if (this.exportInterrupted && (this.layersCount === 0)) {
                 this.exportInterrupted = false;
                 this.uiManager.destroyExportElements();
+                this.layers.unshift(this.selectRegionLayer);
             } else if (this.exportInterrupted) {
                 // Do nothing and wait until last layer has finished processing to cancel
             } else if (this.layersCount === 0) { // Done generating background layer

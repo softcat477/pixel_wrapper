@@ -90,6 +90,7 @@
 	    function PixelPlugin(core) {
 	        _classCallCheck(this, PixelPlugin);
 
+	        this.pixelWrapper = null;
 	        this.core = core;
 	        this.activated = false;
 	        this.pageToolsIcon = this.createIcon();
@@ -144,10 +145,6 @@
 
 	            if (this.tools === null) this.tools = new _tools.Tools(this);
 
-	            // Activate wrapper
-	            this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
-	            this.pixelWrapper.activate();
-
 	            this.uiManager.createPluginElements(this.layers);
 	            this.scrollEventHandle = this.subscribeToScrollEvent();
 	            this.zoomEventHandle = this.subscribeToZoomLevelWillChangeEvent();
@@ -162,6 +159,10 @@
 	            this.activated = true;
 
 	            new _tutorial.Tutorial();
+
+	            // Activate wrapper
+	            if (this.pixelWrapper === null) this.pixelWrapper = new _pixelWrapper.PixelWrapper(this);
+	            this.pixelWrapper.activate();
 	        }
 	    }, {
 	        key: 'deactivatePlugin',
@@ -681,24 +682,23 @@
 	    }, {
 	        key: 'deleteLayer',
 	        value: function deleteLayer() {
-	            // Enable function only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            var layer = this.layers[this.selectedLayerIndex],
+	                currentLayersLength = this.layers.length;
+
+	            // Enable function only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                // Continue
 	            } else {
 	                return;
 	            }
 
-	            var layer = this.layers[this.selectedLayerIndex],
-	                currentLayersLength = this.layers.length;
-
 	            if (currentLayersLength <= 1) throw new _exceptions.CannotDeleteLayerException("Must at least have one layer other than the background");
 
 	            this.uiManager.destroyPluginElements(this.layers, this.background);
 	            this.layers.splice(this.selectedLayerIndex, 1);
-	            this.layerIdCounter--;
 
-	            //reset to the last layer created on delete
-	            this.selectedLayerIndex = this.layerIdCounter - 2;
+	            //reset to the first layer on delete
+	            this.selectedLayerIndex = 0;
 
 	            //refreshing the layers view to reflect changes
 	            this.uiManager.createPluginElements(this.layers);
@@ -707,8 +707,8 @@
 	    }, {
 	        key: 'createLayer',
 	        value: function createLayer() {
-	            // Enable function only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable function only if in standalone Pixel
+	            if (typeof numberInputLayers === 'undefined') {
 	                // Continue
 	            } else {
 	                return;
@@ -1204,6 +1204,7 @@
 	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
 	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
 	        this.exportInterrupted = false;
+	        this.selectRegionLayer;
 	    }
 
 	    _createClass(PixelWrapper, [{
@@ -1212,11 +1213,31 @@
 	            this.createLayers();
 	            this.createButtons();
 	            this.rodanImagesToCanvas();
+	            this.createHelpBox();
 	        }
 	    }, {
 	        key: 'deactivate',
 	        value: function deactivate() {
 	            this.destroyButtons();
+	        }
+	    }, {
+	        key: 'createHelpBox',
+	        value: function createHelpBox() {
+	            // Create help box next to selectRegionLayer selector
+	            var selectRegionLayerBox = document.getElementById("layer--1-selector");
+
+	            var helpDiv = document.createElement("div"),
+	                helpText = document.createTextNode("?"),
+	                tooltipDiv = document.createElement("div"),
+	                tooltipText = document.createTextNode("While in the Select Region Layer, use the " + "rectangle tool to select the regions of the page that you will classify. " + "Once you select these regions, select another layer and begin classifying! " + "Make sure to stay within the bounds of the region.");
+
+	            helpDiv.setAttribute("class", "tooltip");
+	            helpDiv.appendChild(helpText);
+	            tooltipDiv.setAttribute("class", "tooltiptext");
+	            tooltipDiv.appendChild(tooltipText);
+
+	            helpDiv.appendChild(tooltipDiv);
+	            selectRegionLayerBox.appendChild(helpDiv);
 	        }
 
 	        /**
@@ -1227,14 +1248,27 @@
 	    }, {
 	        key: 'createLayers',
 	        value: function createLayers() {
-	            // Only create default layers once 
+	            // Set default tool to rectangle (for select region layer)
+	            this.pixelInstance.tools.currentTool = "rectangle";
+
+	            // Only create default layers once
 	            if (this.layers.length !== 1) {
 	                return;
 	            }
 
+	            var numLayers = numberInputLayers;
+
+	            // Ask user how many layers to create if there's no input
+	            if (numberInputLayers === 0) {
+	                numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
+	            }
+
+	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
+	            this.layers.unshift(this.selectRegionLayer);
+
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
 	            // so start at 2, and ignore one input layer which gets assigned to layer 1
-	            for (var i = 2; i < numberInputLayers + 1; i++) {
+	            for (var i = 2; i < numLayers + 1; i++) {
 	                var colour = void 0;
 	                switch (i) {
 	                    case 2:
@@ -1260,7 +1294,11 @@
 	                this.layers.push(layer);
 	            }
 
-	            this.pixelInstance.layerIdCounter = this.layers.length + 1;
+	            this.pixelInstance.layerIdCounter = this.layers.length;
+
+	            // Refresh UI 
+	            this.uiManager.destroyPluginElements(this.layers, this.pixelInstance.background);
+	            this.uiManager.createPluginElements(this.layers);
 	        }
 	    }, {
 	        key: 'createButtons',
@@ -1278,7 +1316,7 @@
 	            rodanExportButton.appendChild(rodanExportText);
 	            rodanExportButton.addEventListener("click", this.exportToRodan);
 
-	            document.body.appendChild(rodanExportButton);
+	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
 	        }
 	    }, {
 	        key: 'destroyButtons',
@@ -1309,6 +1347,13 @@
 	                    $.ajax({ url: '', type: 'POST', data: JSON.stringify({ 'user_input': urlList }), contentType: 'application/json' });
 	                }
 	            });
+
+	            setTimeout(function () {
+	                alert("Submission successful! Click OK to exit Pixel.js.");
+	            }, 100);
+	            setTimeout(function () {
+	                window.close();
+	            }, 200);
 	        }
 
 	        /**
@@ -1323,19 +1368,32 @@
 	        value: function createBackgroundLayer() {
 	            var _this2 = this;
 
+	            // Don't export selectRegionLayer to Rodan
+	            this.layers.shift();
 	            this.layersCount = this.layers.length;
 
 	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
 	            // this backgroundLayer is only created upon submitting (so no conflicts)
 	            var backgroundLayer = new _layer.Layer(0, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-	                pageIndex = this.pageIndex,
-	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(pageIndex, maxZoom).height;
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
-	            // Highlight whole image for background layer
-	            var rect = new _rectangle.Rectangle(new _point.Point(0, 0, pageIndex), width, height, "add");
-	            backgroundLayer.addShapeToLayer(rect);
+	            // Add select regions to backgroundLayer
+	            this.selectRegionLayer.shapes.forEach(function (shape) {
+	                // Get shape dimensions
+	                var x = shape.origin.getCoordsInPage(maxZoom).x,
+	                    y = shape.origin.getCoordsInPage(maxZoom).y,
+	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
+	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+	                    rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
+
+	                if (shape.blendMode === "subtract") {
+	                    rect.changeBlendModeTo("subtract");
+	                }
+
+	                backgroundLayer.addShapeToLayer(rect);
+	            });
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
 	            // Instantiate progress bar
@@ -1349,14 +1407,14 @@
 	                layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
 	                layerCanvas.width = width;
 	                layerCanvas.height = height;
-	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, pageIndex);
+	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, _this2.pageIndex);
 
-	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height);
+	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
 	            });
 	        }
 	    }, {
 	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, pageIndex, width, height) {
+	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height) {
 	            var _this3 = this;
 
 	            var chunkSize = width,
@@ -1364,17 +1422,17 @@
 	                row = 0,
 	                col = 0,
 	                pixelCtx = layerCanvas.getContext('2d');
+
 	            var doChunk = function doChunk() {
-	                // Use this method instead of nested for so UI isn't blocked
 	                var cnt = chunkSize;
 	                chunkNum++;
 	                while (cnt--) {
 	                    if (row >= height) break;
 	                    if (col < width) {
-	                        var data = pixelCtx.getImageData(col, row, 1, 1).data,
-	                            colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
-	                        if (colour.alpha !== 0) {
-	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, pageIndex), 1, 1, "subtract");
+	                        var data = pixelCtx.getImageData(col, row, 1, 1).data;
+	                        // data is RGBA for one pixel, data[3] is alpha
+	                        if (data[3] !== 0) {
+	                            var currentPixel = new _rectangle.Rectangle(new _point.Point(col, row, _this3.pageIndex), 1, 1, "subtract");
 	                            backgroundLayer.addShapeToLayer(currentPixel);
 	                        }
 	                        col++;
@@ -1408,6 +1466,7 @@
 	                if (this.exportInterrupted && this.layersCount === 0) {
 	                    this.exportInterrupted = false;
 	                    this.uiManager.destroyExportElements();
+	                    this.layers.unshift(this.selectRegionLayer);
 	                } else if (this.exportInterrupted) {
 	                    // Do nothing and wait until last layer has finished processing to cancel
 	                } else if (this.layersCount === 0) {
@@ -1605,8 +1664,16 @@
 
 	            // TODO: Use padded coordinates
 	            else if (this.blendMode === "add") {
-	                    if (pageIndex === this.origin.pageIndex) {
-	                        //Draw the rectangle
+	                    if (pageIndex === this.origin.pageIndex && layer.layerId === -1) // "Select Region" layer 
+	                        {
+	                            // Draw the rectangle with a border
+	                            ctx.fillStyle = layer.colour.toHTMLColour();
+	                            ctx.lineWidth = 1;
+	                            ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+	                            ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                            ctx.strokeRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                        } else if (pageIndex === this.origin.pageIndex) {
+	                        // Draw rectangle without border
 	                        ctx.fillStyle = layer.colour.toHTMLColour();
 	                        ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
 	                    }
@@ -3093,8 +3160,8 @@
 	            this.placeLayerCanvasesInDiva(layers);
 	            this.createUndoButton();
 	            this.createRedoButton();
-	            // Enable buttons only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable buttons only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                this.createDeleteLayerButton();
 	                this.createCreateLayerButton();
 	            }
@@ -3110,8 +3177,8 @@
 	            this.destroyBrushSizeSelector();
 	            this.destroyUndoButton();
 	            this.destroyRedoButton();
-	            // Enable buttons only if in standalone Pixel or no input layers
-	            if (typeof numberInputLayers === 'undefined' || numberInputLayers === 0) {
+	            // Enable buttons only if in standalone Pixel 
+	            if (typeof numberInputLayers === 'undefined') {
 	                this.destroyDeleteLayerButton();
 	                this.destroyCreateLayerButton();
 	            }
@@ -4106,6 +4173,9 @@
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
 	                case this.type.erase:
+	                    this.pixelInstance.uiManager.destroyBrushCursor();
+	                    break;
+	                case this.type.rectangle:
 	                    this.pixelInstance.uiManager.destroyBrushCursor();
 	                    break;
 	                default:
