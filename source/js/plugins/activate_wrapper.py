@@ -42,3 +42,18 @@ for i in range(len(lines)):
     f.write(lines[i])
 
 f.close()
+
+
+# Remove the index.html copying line from pixel.sh, which is incompatible with pixel_wrapper
+
+f = open('./pixel.js/pixel.sh', 'r')
+lines = f.readlines()
+f.close()
+
+f = open('./pixel.js/pixel.sh', 'w')
+for i in range(len(lines)):
+    if ('scp ./index.html ../../../../' in lines[i]):
+        lines[i] = '# scp ./index.html ../../../../'
+    f.write(lines[i])
+
+f.close()
