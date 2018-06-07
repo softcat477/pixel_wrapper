@@ -1199,7 +1199,7 @@
 
 	        this.pixelInstance = pixelInstance;
 	        this.layers = pixelInstance.layers;
-	        this.layersCount = this.layers.length;
+	        this.totalRegionCount;
 	        this.uiManager = pixelInstance.uiManager;
 	        this.pageIndex = pixelInstance.core.getSettings().currentPageIndex;
 	        this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
@@ -1213,7 +1213,7 @@
 	            this.createLayers();
 	            this.createButtons();
 	            this.rodanImagesToCanvas();
-	            this.createHelpBox();
+	            this.createTooltip();
 	        }
 	    }, {
 	        key: 'deactivate',
@@ -1221,8 +1221,8 @@
 	            this.destroyButtons();
 	        }
 	    }, {
-	        key: 'createHelpBox',
-	        value: function createHelpBox() {
+	        key: 'createTooltip',
+	        value: function createTooltip() {
 	            // Create help box next to selectRegionLayer selector
 	            var selectRegionLayerBox = document.getElementById("layer--1-selector");
 
@@ -1238,6 +1238,31 @@
 
 	            helpDiv.appendChild(tooltipDiv);
 	            selectRegionLayerBox.appendChild(helpDiv);
+	        }
+	    }, {
+	        key: 'createButtons',
+	        value: function createButtons() {
+	            var _this = this;
+
+	            var rodanExportButton = document.createElement("button"),
+	                rodanExportText = document.createTextNode("Submit To Rodan");
+
+	            this.exportToRodan = function () {
+	                _this.createBackgroundLayer();
+	            }; // This will call exportLayersToRodan when done
+
+	            rodanExportButton.setAttribute("id", "rodan-export-button");
+	            rodanExportButton.appendChild(rodanExportText);
+	            rodanExportButton.addEventListener("click", this.exportToRodan);
+
+	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
+	        }
+	    }, {
+	        key: 'destroyButtons',
+	        value: function destroyButtons() {
+	            var rodanExportButton = document.getElementById("rodan-export-button");
+
+	            rodanExportButton.parentNode.removeChild(rodanExportButton);
 	        }
 
 	        /**
@@ -1260,14 +1285,16 @@
 
 	            // Ask user how many layers to create if there's no input
 	            if (numberInputLayers === 0) {
-	                numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
+	                while (numLayers <= 0 || numLayers > 7) {
+	                    numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
+	                }
 	            }
 
 	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
 	            this.layers.unshift(this.selectRegionLayer);
 
 	            // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
-	            // so start at 2, and ignore one input layer which gets assigned to layer 1
+	            // so start at 2, and ignore one input layer which gets assigned to layer 1. Max 7 input
 	            for (var i = 2; i < numLayers + 1; i++) {
 	                var colour = void 0;
 	                switch (i) {
@@ -1301,31 +1328,6 @@
 	            this.uiManager.createPluginElements(this.layers);
 	        }
 	    }, {
-	        key: 'createButtons',
-	        value: function createButtons() {
-	            var _this = this;
-
-	            var rodanExportButton = document.createElement("button"),
-	                rodanExportText = document.createTextNode("Submit To Rodan");
-
-	            this.exportToRodan = function () {
-	                _this.createBackgroundLayer();
-	            }; // This will call exportLayersToRodan when done
-
-	            rodanExportButton.setAttribute("id", "rodan-export-button");
-	            rodanExportButton.appendChild(rodanExportText);
-	            rodanExportButton.addEventListener("click", this.exportToRodan);
-
-	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
-	        }
-	    }, {
-	        key: 'destroyButtons',
-	        value: function destroyButtons() {
-	            var rodanExportButton = document.getElementById("rodan-export-button");
-
-	            rodanExportButton.parentNode.removeChild(rodanExportButton);
-	        }
-	    }, {
 	        key: 'exportLayersToRodan',
 	        value: function exportLayersToRodan() {
 	            console.log("Exporting!");
@@ -1348,6 +1350,7 @@
 	                }
 	            });
 
+	            // Alert and close Pixel after submitting
 	            setTimeout(function () {
 	                alert("Submission successful! Click OK to exit Pixel.js.");
 	            }, 100);
@@ -1357,10 +1360,9 @@
 	        }
 
 	        /**
-	         *  Generates a background layer by iterating over all the pixel data for each layer and 
-	         *  subtracting it from the background layer if the data is non-transparent (alpha != 0). Somewhat
-	         *  replicates what the exportLayersAsImageData function does but for generating the background
-	         *  layer, and there are numerous (albeit small) differences that requires a new function
+	         *  Generates a background layer by iterating over all the pixel data for each layer within the
+	         *  selection regions, and subtracting it from the background layer if the data is 
+	         *  non-transparent (alpha != 0). Uses the uiManager progress bar and exports to Rodan when done
 	         */
 
 	    }, {
@@ -1370,34 +1372,50 @@
 
 	            // Don't export selectRegionLayer to Rodan
 	            this.layers.shift();
-	            this.layersCount = this.layers.length;
 
 	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
 	            // this backgroundLayer is only created upon submitting (so no conflicts)
 	            var backgroundLayer = new _layer.Layer(0, new _colour.Colour(242, 0, 242, 1), "Background Layer", this.pixelInstance, 0.5, this.pixelInstance.actions),
 	                maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
 	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
+	                height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
+	                selectRegions = this.selectRegionLayer.shapes,
+	                regionsInfo = { // For progress method calculations
+	                count: 0, // Number of "add" regions
+	                sumHeight: 0 // Sum of all "add" regions
+	            };
 
-	            // Add select regions to backgroundLayer
-	            this.selectRegionLayer.shapes.forEach(function (shape) {
+	            // Add selection regions to the backgroundLayer
+	            selectRegions.forEach(function (region) {
 	                // Get shape dimensions
-	                var x = shape.origin.getCoordsInPage(maxZoom).x,
-	                    y = shape.origin.getCoordsInPage(maxZoom).y,
-	                    rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-	                    rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+	                var x = region.origin.getCoordsInPage(maxZoom).x,
+	                    y = region.origin.getCoordsInPage(maxZoom).y,
+	                    rectWidth = region.relativeRectWidth * Math.pow(2, maxZoom),
+	                    rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
 	                    rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 
-	                if (shape.blendMode === "subtract") {
+	                if (region.blendMode === "subtract") {
 	                    rect.changeBlendModeTo("subtract");
+	                } else {
+	                    regionsInfo.count++;
+	                    regionsInfo.sumHeight += rectHeight;
 	                }
 
 	                backgroundLayer.addShapeToLayer(rect);
 	            });
 	            backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
+	            // Alert and return if user hasn't created a selection region
+	            if (regionsInfo.count === 0) {
+	                alert("You haven't created any select regions!");
+	                this.layers.unshift(this.selectRegionLayer);
+	                return;
+	            }
+
 	            // Instantiate progress bar
 	            this.uiManager.createExportElements(this);
+	            // Total number of regions to iterate over (over all layers)
+	            this.totalRegionCount = this.layers.length * regionsInfo.count;
 
 	            this.layers.forEach(function (layer) {
 	                // Create layer canvas and draw (so pixel data can be accessed)
@@ -1409,18 +1427,35 @@
 	                layerCanvas.height = height;
 	                layer.drawLayerInPageCoords(maxZoom, layerCanvas, _this2.pageIndex);
 
-	                _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
+	                // Go over every selection region and subtract layer within this region from background
+	                for (var i = 0; i < selectRegions.length; i++) {
+	                    var region = selectRegions[i];
+	                    if (region.blendMode !== "add") {
+	                        continue;
+	                    }
+	                    var dimensions = {
+	                        x: region.origin.getCoordsInPage(maxZoom).x,
+	                        y: region.origin.getCoordsInPage(maxZoom).y,
+	                        width: region.relativeRectWidth * Math.pow(2, maxZoom),
+	                        height: region.relativeRectHeight * Math.pow(2, maxZoom)
+	                    };
+	                    _this2.subtractLayerFromBackground(backgroundLayer, layerCanvas, dimensions, regionsInfo);
+	                }
 	            });
 	        }
 	    }, {
 	        key: 'subtractLayerFromBackground',
-	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height) {
+	        value: function subtractLayerFromBackground(backgroundLayer, layerCanvas, dimensions, regionsInfo) {
 	            var _this3 = this;
 
-	            var chunkSize = width,
+	            var chunkSize = dimensions.width,
 	                chunkNum = 0,
-	                row = 0,
-	                col = 0,
+	                col = dimensions.x,
+	                row = dimensions.y,
+
+	            // Height and width relative to the origin point (col, row)
+	            width = col + dimensions.width,
+	                height = row + dimensions.height,
 	                pixelCtx = layerCanvas.getContext('2d');
 
 	            var doChunk = function doChunk() {
@@ -1439,11 +1474,11 @@
 	                    } else {
 	                        // Reached end of row, jump to next
 	                        row++;
-	                        col = 0;
+	                        col = dimensions.x;
 	                    }
 	                }
-	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) {
-	                    // recall function
+	                // If progress not complete, recall this function
+	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) {
 	                    setTimeout(doChunk, 1);
 	                }
 	            };
@@ -1451,25 +1486,25 @@
 	        }
 	    }, {
 	        key: 'progress',
-	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer) {
+	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo) {
 	            if (row === height || this.exportInterrupted) {
-	                this.layersCount -= 1;
+	                this.totalRegionCount -= 1;
 	            }
 	            if (row < height && !this.exportInterrupted) {
-	                var percentage = chunkNum * chunkSize * 100 / (height * chunkSize),
+	                var percentage = regionsInfo.count * chunkNum * chunkSize * 100 / (regionsInfo.sumHeight * chunkSize),
 	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;
 	                this.pixelInstance.uiManager.updateProgress(roundedPercentage);
 	                return {
-	                    needsRecall: true
+	                    incomplete: true
 	                };
 	            } else {
-	                if (this.exportInterrupted && this.layersCount === 0) {
+	                if (this.exportInterrupted && this.totalRegionCount === 0) {
 	                    this.exportInterrupted = false;
 	                    this.uiManager.destroyExportElements();
 	                    this.layers.unshift(this.selectRegionLayer);
 	                } else if (this.exportInterrupted) {
 	                    // Do nothing and wait until last layer has finished processing to cancel
-	                } else if (this.layersCount === 0) {
+	                } else if (this.totalRegionCount === 0) {
 	                    // Done generating background layer
 	                    backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
 	                    this.layers.unshift(backgroundLayer);
@@ -1481,6 +1516,11 @@
 	                needsRecall: false
 	            };
 	        }
+
+	        /**
+	         *  Handles the Rodan input layers and draws them on each layer in Pixel 
+	         */
+
 	    }, {
 	        key: 'rodanImagesToCanvas',
 	        value: function rodanImagesToCanvas() {
