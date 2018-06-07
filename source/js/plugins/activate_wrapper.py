@@ -53,7 +53,10 @@ f.close()
 f = open('./pixel.js/pixel.sh', 'w')
 for i in range(len(lines)):
     if ('scp ./index.html ../../../../' in lines[i]):
-        lines[i] = '# scp ./index.html ../../../../'
+        lines[i] = '# scp ./index.html ../../../../\n'
+    if ('echo "> gulp"' in lines[i]):
+        lines[i] = 'echo "> gulp develop:rodan"\n'
+        lines[i+1] = 'gulp develop:rodan\n'
     f.write(lines[i])
 
 f.close()
