@@ -160,8 +160,8 @@ export class PixelWrapper
         });
 
         // Alert and close Pixel after submitting
-        setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 100);
-        setTimeout(function(){ window.close(); }, 200);
+        setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 1000);
+        setTimeout(function(){ window.close(); }, 1200);
     }
 
     /**
