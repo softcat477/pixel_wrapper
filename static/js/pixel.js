@@ -1353,10 +1353,10 @@
 	            // Alert and close Pixel after submitting
 	            setTimeout(function () {
 	                alert("Submission successful! Click OK to exit Pixel.js.");
-	            }, 100);
+	            }, 1000);
 	            setTimeout(function () {
 	                window.close();
-	            }, 200);
+	            }, 1200);
 	        }
 
 	        /**
