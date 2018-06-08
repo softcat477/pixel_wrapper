@@ -467,6 +467,17 @@ button {
   visibility: hidden;
 }
 
+/* For Tutorial Gifs*/
+.tutorial-image {
+  width: 100%;
+}
+
+#tutorial-progress {
+  position: absolute;
+  right: 10px;
+  bottom: 60px;
+}
+
 /* Tooltip container */
 .tooltip {
     position: relative;
