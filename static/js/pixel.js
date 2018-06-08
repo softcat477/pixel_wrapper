@@ -1332,6 +1332,8 @@
 	        value: function exportLayersToRodan() {
 	            console.log("Exporting!");
 
+	            this.layers.push(this.selectRegionLayer);
+
 	            var count = this.layers.length;
 	            var urlList = [];
 
@@ -1340,7 +1342,7 @@
 	                console.log(layer.layerId + " " + layer.layerName);
 
 	                var dataURL = layer.getCanvas().toDataURL();
-	                urlList[layer.layerId] = dataURL;
+	                urlList.push(dataURL);
 	                count -= 1;
 	                if (count === 0) {
 	                    console.log(urlList);
@@ -1370,7 +1372,7 @@
 	        value: function createBackgroundLayer() {
 	            var _this2 = this;
 
-	            // Don't export selectRegionLayer to Rodan
+	            // Don't consider selectRegionLayer for background generation
 	            this.layers.shift();
 
 	            // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 

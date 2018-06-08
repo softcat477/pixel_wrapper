@@ -1,4 +1,4 @@
-# pixel_wrapper
+# Pixel Wrapper
 
 A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [```Diva.js```](https://github.com/DDMAL/diva.js) as a job in the workflow builder [```Rodan```](https://github.com/DDMAL/Rodan)
 
@@ -54,9 +54,18 @@ Here are some user-level instructions on adding a pixel.js job in RODAN.
 - Create a new workflow, or select an existing one.
 - Double-click workflow -> workflow header tab -> add job
 - Find `Diva - Pixel.js` -> Add
-- Double-click red input square to select background image from resources (you must pre-upload resources, select the resource section on the left to do so)
+- Double-click red input square to select your image from resources (you must pre-upload resources, select the resource section on the left to do so)
 - Choose png or tiff resource -> add -> input square should be green now
 - Workflow header tab -> run
+
+### Setting Up the Ports
+- You must create however many layers that you wish to classify as the input ports.
+  - Do this by right clicking on the Pixel job, clicking on ports, and adding/deleting input ports as needed.
+  - For example, if you're working with 3 layers (music symbols, text, and staff lines), then create three input ports.
+- There must be two more output ports than input ports. 
+  - This is because one port is reserved for the auto-generated *Background Layer* (the negative of the classified layers combined), and another is reserved for the *Select Regions Layer* (a mask of the user-verified portions of the image). 
+  - Ensure that your output ports are in incremental order (ie. do not skip from layer 1 to layer 5).
+- For example, if you have `Layers {1, 2, 3}` as input ports, then you must have `Layers {0, 1, 2, 3, 4}` as output ports. `Layer 0` is already enabled by default, so you'd just need to enable the other 4.
 
 ## Making changes to the pixel_wrapper source code
 Sometimes changes need to be done to the wrapper code found in `source/js/plugins/pixel-wrapper.js`, or the `Pixel.js` source code in `source/js/plugins/Pixel.js`. 

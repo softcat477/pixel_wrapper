@@ -140,6 +140,8 @@ export class PixelWrapper
     {
         console.log("Exporting!");
 
+        this.layers.push(this.selectRegionLayer);
+
         let count = this.layers.length;
         let urlList = [];
 
@@ -148,7 +150,7 @@ export class PixelWrapper
             console.log(layer.layerId + " " + layer.layerName);
 
             let dataURL = layer.getCanvas().toDataURL();
-            urlList[layer.layerId] = dataURL; 
+            urlList.push(dataURL); 
             count -= 1;
                 if (count === 0)
                 {
@@ -171,7 +173,7 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
-        // Don't export selectRegionLayer to Rodan
+        // Don't consider selectRegionLayer for background generation
         this.layers.shift();
 
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
