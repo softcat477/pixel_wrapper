@@ -29,7 +29,6 @@
     var EventListener = 'EventListener';
     var addEventListener = 'add' + EventListener;
     var removeEventListener = 'remove' + EventListener;
-    var newScrollX, newScrollY;
 
     var dragged = [];
 

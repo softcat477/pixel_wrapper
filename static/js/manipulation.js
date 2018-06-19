@@ -478,10 +478,8 @@
 	        }
 
 	    var fkeys = Object.keys(_filterQueue);
-	    var flen = fkeys.length;
-	    var flenScale = 1 / flen;
 
-	    fkeys.map(function (filt) {});
+	    fkeys.map(function () {});
 	}
 
 	/**

@@ -2747,7 +2747,6 @@
 	    var EventListener = 'EventListener';
 	    var addEventListener = 'add' + EventListener;
 	    var removeEventListener = 'remove' + EventListener;
-	    var newScrollX, newScrollY;
 	
 	    var dragged = [];
 	
@@ -4018,7 +4017,7 @@
 	            if (this.settings.verticallyOriented || this.settings.inGrid) direction = newScrollTop - previousTopScroll;else direction = newScrollLeft - previousLeftScroll;
 	
 	            //give adjust the direction we care about
-	            this.viewerState.renderer.adjust(direction);
+	            this.viewerState.renderer.adjust();
 	
 	            var primaryScroll = this.settings.verticallyOriented || this.settings.inGrid ? newScrollTop : newScrollLeft;
 	
@@ -7671,7 +7670,7 @@
 	        }
 	    }, {
 	        key: 'adjust',
-	        value: function adjust(direction) {
+	        value: function adjust() {
 	            this._clearAnimation();
 	
 	            this._render();
@@ -9659,7 +9658,7 @@
 	
 	    // Setup
 	    // Times are in milliseconds from a basically arbitrary start
-	    var start = now();
+	    var start = Date.now();
 	    var end = start + durationMs;
 	
 	    var tweenFns = {};
@@ -9686,7 +9685,7 @@
 	    };
 	
 	    function update() {
-	        var current = now();
+	        var current = Date.now();
 	        var elapsed = Math.min((current - start) / durationMs, 1);
 	
 	        updateValues(elapsed);
@@ -10658,7 +10657,7 @@
 	    return imageDimension / Math.pow(2, zoomDifference);
 	};
 	
-	var getOtherImageData = function getOtherImageData(otherImages, lowestMaxZoom, canvasWidth, canvasHeight) {
+	var getOtherImageData = function getOtherImageData(otherImages, lowestMaxZoom) {
 	    return otherImages.map(function (itm) {
 	        var w = itm.width;
 	        var h = itm.height;
@@ -10768,7 +10767,7 @@
 	        maxZoom = getMaxZoomLevel(width, height);
 	
 	        if (thisResource.item) {
-	            otherImages = getOtherImageData(thisResource.item, lowestMaxZoom, width, height);
+	            otherImages = getOtherImageData(thisResource.item, lowestMaxZoom);
 	        } else {
 	            otherImages = [];
 	        }

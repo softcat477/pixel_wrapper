@@ -76,7 +76,7 @@ export class PixelWrapper
 
     /**
      *  Creates the number of required layers based on the number of input ports in the Rodan job.
-     *  The variable numberInputLayers is defined in the outermost index.html 
+     *  The variable numberInputLayers is actually defined in the outermost index.html 
      */
     createLayers ()
     {

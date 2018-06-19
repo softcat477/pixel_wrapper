@@ -455,6 +455,7 @@
 	                    if (this.selectedLayerIndex !== this.layers.length - 1) this.reorderLayers(this.selectedLayerIndex, this.selectedLayerIndex + 1);else {
 	                        //TODO: throw layer is already highest layer exception
 	                    }
+	                    break;
 	                case "escape":
 	                    if (this.selection !== null) {
 	                        if (this.selection.imageData === null) {
@@ -682,8 +683,7 @@
 	    }, {
 	        key: 'deleteLayer',
 	        value: function deleteLayer() {
-	            var layer = this.layers[this.selectedLayerIndex],
-	                currentLayersLength = this.layers.length;
+	            var currentLayersLength = this.layers.length;
 
 	            // Enable function only if in standalone Pixel 
 	            if (typeof numberInputLayers === 'undefined') {
@@ -1267,7 +1267,7 @@
 
 	        /**
 	         *  Creates the number of required layers based on the number of input ports in the Rodan job.
-	         *  The variable numberInputLayers is defined in the outermost index.html 
+	         *  The variable numberInputLayers is actually defined in the outermost index.html 
 	         */
 
 	    }, {
@@ -1277,9 +1277,7 @@
 	            this.pixelInstance.tools.currentTool = "rectangle";
 
 	            // Only create default layers once
-	            if (this.layers.length !== 1) {
-	                return;
-	            }
+	            if (this.layers.length !== 1) return;
 
 	            var numLayers = numberInputLayers;
 
@@ -1338,7 +1336,6 @@
 	            var urlList = [];
 
 	            this.layers.forEach(function (layer) {
-
 	                console.log(layer.layerId + " " + layer.layerName);
 
 	                var dataURL = layer.getCanvas().toDataURL();
@@ -1396,9 +1393,7 @@
 	                    rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
 	                    rect = new _rectangle.Rectangle(new _point.Point(x, y, _this2.pageIndex), rectWidth, rectHeight, "add");
 
-	                if (region.blendMode === "subtract") {
-	                    rect.changeBlendModeTo("subtract");
-	                } else {
+	                if (region.blendMode === "subtract") rect.changeBlendModeTo("subtract");else {
 	                    regionsInfo.count++;
 	                    regionsInfo.sumHeight += rectHeight;
 	                }
@@ -1432,9 +1427,7 @@
 	                // Go over every selection region and subtract layer within this region from background
 	                for (var i = 0; i < selectRegions.length; i++) {
 	                    var region = selectRegions[i];
-	                    if (region.blendMode !== "add") {
-	                        continue;
-	                    }
+	                    if (region.blendMode !== "add") continue;
 	                    var dimensions = {
 	                        x: region.origin.getCoordsInPage(maxZoom).x,
 	                        y: region.origin.getCoordsInPage(maxZoom).y,
@@ -1480,18 +1473,14 @@
 	                    }
 	                }
 	                // If progress not complete, recall this function
-	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) {
-	                    setTimeout(doChunk, 1);
-	                }
+	                if (_this3.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) setTimeout(doChunk, 1);
 	            };
 	            doChunk();
 	        }
 	    }, {
 	        key: 'progress',
 	        value: function progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo) {
-	            if (row === height || this.exportInterrupted) {
-	                this.totalRegionCount -= 1;
-	            }
+	            if (row === height || this.exportInterrupted) this.totalRegionCount -= 1;
 	            if (row < height && !this.exportInterrupted) {
 	                var percentage = regionsInfo.count * chunkNum * chunkSize * 100 / (regionsInfo.sumHeight * chunkSize),
 	                    roundedPercentage = percentage > 100 ? 100 : Math.round(percentage * 10) / 10;

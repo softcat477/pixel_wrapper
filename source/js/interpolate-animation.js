@@ -31,7 +31,7 @@ function animate (options)
 
     // Setup
     // Times are in milliseconds from a basically arbitrary start
-    const start = now();
+    const start = Date.now();
     const end = start + durationMs;
 
     const tweenFns = {};
@@ -61,7 +61,7 @@ function animate (options)
 
     function update()
     {
-        const current = now();
+        const current = Date.now();
         const elapsed = Math.min((current - start) / durationMs, 1);
 
         updateValues(elapsed);

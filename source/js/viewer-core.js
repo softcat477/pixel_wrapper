@@ -506,7 +506,7 @@ export default class ViewerCore
                 },
                 onZoomLevelWillChange: (zoomLevel) =>
                 {
-                    this.publish('ZoomLevelWillChange', zoomLevel)
+                    this.publish('ZoomLevelWillChange', zoomLevel);
                 }
             };
 
@@ -688,7 +688,7 @@ export default class ViewerCore
             },
             getPosition: (parameters) =>
             {
-                return getPositionForZoomLevel(parameters.zoomLevel, initialZoomLevel)
+                return getPositionForZoomLevel(parameters.zoomLevel, initialZoomLevel);
             },
             onEnd: (info) =>
             {
@@ -866,7 +866,7 @@ export default class ViewerCore
             direction = newScrollLeft - previousLeftScroll;
 
         //give adjust the direction we care about
-        this.viewerState.renderer.adjust(direction);
+        this.viewerState.renderer.adjust();
 
         const primaryScroll = (this.settings.verticallyOriented || this.settings.inGrid) ? newScrollTop : newScrollLeft;
 

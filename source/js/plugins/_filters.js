@@ -15,10 +15,8 @@ export function addFilterToQueue (filter)
     }
 
     let fkeys = Object.keys(_filterQueue);
-    let flen = fkeys.length;
-    let flenScale = 1 / flen;
 
-    fkeys.map( (filt) => {
+    fkeys.map( () => {
 
     });
 
