@@ -370,5 +370,6 @@ export class PixelWrapper
             }
         });
     }
-
 }
+
+module.exports = PixelWrapper;
