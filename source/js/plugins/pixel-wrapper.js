@@ -1,7 +1,7 @@
-import {Rectangle} from './Pixel.js/source/rectangle';
-import {Point} from './Pixel.js/source/point';
-import {Layer} from './Pixel.js/source/layer';
-import {Colour} from './Pixel.js/source/colour';
+import {Rectangle} from './pixel.js/source/rectangle';
+import {Point} from './pixel.js/source/point';
+import {Layer} from './pixel.js/source/layer';
+import {Colour} from './pixel.js/source/colour';
 
 export class PixelWrapper
 {
@@ -371,5 +371,3 @@ export class PixelWrapper
         });
     }
 }
-
-module.exports = PixelWrapper;

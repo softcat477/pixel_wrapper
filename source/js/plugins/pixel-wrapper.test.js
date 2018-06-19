@@ -1,5 +1,5 @@
-import PixelWrapper from './pixel-wrapper';
+import {PixelWrapper} from './pixel-wrapper';
 
-test('pixel isnt instantiated', () => {
+test('pixel is not yet instantiated', () => {
     expect(PixelWrapper.layers).toBeUndefined();
 });

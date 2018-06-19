@@ -62,27 +62,27 @@
 
 	var _pixelWrapper = __webpack_require__(2);
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(10);
 
-	var _rectangle = __webpack_require__(3);
+	var _rectangle = __webpack_require__(11);
 
-	var _layer = __webpack_require__(7);
+	var _layer = __webpack_require__(14);
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(13);
 
-	var _export = __webpack_require__(10);
+	var _export = __webpack_require__(17);
 
-	var _uiManager = __webpack_require__(11);
+	var _uiManager = __webpack_require__(18);
 
-	var _tools = __webpack_require__(13);
+	var _tools = __webpack_require__(20);
 
-	var _import = __webpack_require__(14);
+	var _import = __webpack_require__(21);
 
-	var _selection = __webpack_require__(15);
+	var _selection = __webpack_require__(22);
 
-	var _tutorial = __webpack_require__(16);
+	var _tutorial = __webpack_require__(23);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(19);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1279,14 +1279,15 @@
 	            // Only create default layers once
 	            if (this.layers.length !== 1) return;
 
-	            var numLayers = numberInputLayers;
+	            var numLayers = numberInputLayers; // jshint ignore:line
 
 	            // Ask user how many layers to create if there's no input
-	            if (numberInputLayers === 0) {
-	                while (numLayers <= 0 || numLayers > 7) {
-	                    numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
+	            if (numberInputLayers === 0) // jshint ignore:line
+	                {
+	                    while (numLayers <= 0 || numLayers > 7) {
+	                        numLayers = parseInt(prompt("How many layers will you classify?\n" + "This must be the same number as the number of output ports.", 3));
+	                    }
 	                }
-	            }
 
 	            this.selectRegionLayer = new _layer.Layer(-1, new _colour.Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
 	            this.layers.unshift(this.selectRegionLayer);
@@ -2679,6 +2680,1135 @@
 
 /***/ }),
 /* 10 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
+	var Point = exports.Point = function () {
+	    /**
+	     * The relative origins allow to position the point at the same page location no matter what the zoom level is
+	     * @param relativeOriginX
+	     * @param relativeOriginY
+	     * @param pageIndex
+	     */
+	    function Point(relativeOriginX, relativeOriginY, pageIndex) {
+	        _classCallCheck(this, Point);
+
+	        this.relativeOriginX = relativeOriginX;
+	        this.relativeOriginY = relativeOriginY;
+	        this.pageIndex = pageIndex;
+	    }
+
+	    /**
+	     * Calculates the coordinates of a point on a page in pixels given the zoom level
+	     * where the top left corner of the page always represents the (0,0) coordinate.
+	     * The function scales the relative coordinates to the required zoom level.
+	     * @param zoomLevel
+	     * @returns {{x: number, y: number}}
+	     */
+
+
+	    _createClass(Point, [{
+	        key: "getCoordsInPage",
+	        value: function getCoordsInPage(zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+	            return {
+	                x: this.relativeOriginX * scaleRatio,
+	                y: this.relativeOriginY * scaleRatio
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on the diva canvas (viewport) in pixels, where the top left corner of the canvas
+	         * represents the (0,0) coordinate.
+	         * This is relative to the viewport padding.
+	         * @param zoomLevel
+	         * @param pageIndex
+	         * @param renderer
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getCoordsInViewport",
+	        value: function getCoordsInViewport(zoomLevel, pageIndex, renderer) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            var absoluteCoordinates = this.getCoordsInPage(zoomLevel);
+
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            var offsetX = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteCoordinates.x,
+	                offsetY = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteCoordinates.y;
+
+	            return {
+	                x: offsetX,
+	                y: offsetY
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on a page in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getAbsoluteCoordinatesFromPadded",
+	        value: function getAbsoluteCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            return {
+	                x: Math.round(paddedX - (renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX)),
+	                y: Math.round(paddedY - (renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY))
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point on diva canvas (viewport) in pixels
+	         * from the absolute coordinates on the page
+	         * @param pageIndex
+	         * @param renderer
+	         * @param absoluteX
+	         * @param absoluteY
+	         * @returns {{x: *, y: *}}
+	         */
+
+	    }, {
+	        key: "getPaddedCoordinatesFromAbsolute",
+	        value: function getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteX, absoluteY) {
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // Calculates where the highlights should be drawn as a function of the whole canvas coordinates system
+	            // (to make it look like it is on top of a page in Diva)
+	            return {
+	                x: renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteX,
+	                y: renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteY
+	            };
+	        }
+
+	        /**
+	         * Calculates the coordinates of a point relative to a page (used to calculate the absolute coordinates at different zoom levels) in pixels
+	         * from the padded coordinates used to display the point on diva canvas (viewport)
+	         * @param pageIndex
+	         * @param renderer
+	         * @param paddedX
+	         * @param paddedY
+	         * @param zoomLevel
+	         * @returns {{x: number, y: number}}
+	         */
+
+	    }, {
+	        key: "getRelativeCoordinatesFromPadded",
+	        value: function getRelativeCoordinatesFromPadded(pageIndex, renderer, paddedX, paddedY, zoomLevel) {
+	            var scaleRatio = Math.pow(2, zoomLevel);
+
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	            // (to make it look like it is on top of a page in Diva)
+	            var absoluteRectOriginX = paddedX - renderer._getImageOffset(pageIndex).left + renderer._viewport.left - viewportPaddingX,
+	                absoluteRectOriginY = paddedY - renderer._getImageOffset(pageIndex).top + renderer._viewport.top - viewportPaddingY;
+
+	            return {
+	                x: absoluteRectOriginX / scaleRatio,
+	                y: absoluteRectOriginY / scaleRatio
+	            };
+	        }
+	    }]);
+
+	    return Point;
+	}();
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.Rectangle = undefined;
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _shape = __webpack_require__(12);
+
+	var _colour = __webpack_require__(13);
+
+	var _point = __webpack_require__(10);
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*jshint esversion: 6 */
+
+
+	var Rectangle = exports.Rectangle = function (_Shape) {
+	    _inherits(Rectangle, _Shape);
+
+	    function Rectangle(point, relativeRectWidth, relativeRectHeight, blendMode) {
+	        _classCallCheck(this, Rectangle);
+
+	        var _this = _possibleConstructorReturn(this, (Rectangle.__proto__ || Object.getPrototypeOf(Rectangle)).call(this, point, blendMode));
+
+	        _this.relativeRectWidth = relativeRectWidth;
+	        _this.relativeRectHeight = relativeRectHeight;
+	        return _this;
+	    }
+
+	    /**
+	     * draws a rectangle of a certain layer in a canvas using viewport coordinates (padded coordinates)
+	     * @param layer
+	     * @param pageIndex
+	     * @param zoomLevel
+	     * @param renderer
+	     * @param canvas
+	     */
+
+
+	    _createClass(Rectangle, [{
+	        key: 'drawInViewport',
+	        value: function drawInViewport(layer, pageIndex, zoomLevel, renderer, canvas) {
+	            var scaleRatio = Math.pow(2, zoomLevel),
+	                ctx = canvas.getContext('2d');
+
+	            var viewportPaddingX = Math.max(0, (renderer._viewport.width - renderer.layout.dimensions.width) / 2);
+	            var viewportPaddingY = Math.max(0, (renderer._viewport.height - renderer.layout.dimensions.height) / 2);
+
+	            // The following absolute values are experimental values to highlight the square on the first page of Salzinnes, CDN-Hsmu M2149.L4
+	            // The relative values are used to scale the highlights according to the zoom level on the page itself
+	            var absoluteRectOriginX = this.origin.relativeOriginX * scaleRatio,
+	                absoluteRectOriginY = this.origin.relativeOriginY * scaleRatio,
+	                absoluteRectWidth = this.relativeRectWidth * scaleRatio,
+	                absoluteRectHeight = this.relativeRectHeight * scaleRatio;
+
+	            //Selection tool
+	            if (this.blendMode === "select") {
+	                //TODO: SELECTION CODE HERE
+	                if (pageIndex === this.origin.pageIndex) {
+	                    // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	                    // (to make it look like it is on top of a page in Diva)
+	                    var highlightXOffset = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteRectOriginX,
+	                        highlightYOffset = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteRectOriginY;
+
+	                    //Draw the selection rectangle
+	                    ctx.fillStyle = 'rgba(147, 192, 255, 0.3)';
+	                    ctx.lineWidth = 1;
+	                    ctx.strokeStyle = 'rgba(25, 25, 25, 1)';
+	                    ctx.fillRect(highlightXOffset, highlightYOffset, absoluteRectWidth, absoluteRectHeight);
+	                    ctx.strokeRect(highlightXOffset, highlightYOffset, absoluteRectWidth, absoluteRectHeight);
+	                }
+	                return;
+	            }
+
+	            //Rectangle tool
+	            // TODO: Use padded coordinates
+	            if (this.blendMode === "add") {
+	                if (pageIndex === this.origin.pageIndex) {
+	                    // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	                    // (to make it look like it is on top of a page in Diva)
+	                    var _highlightXOffset = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteRectOriginX,
+	                        _highlightYOffset = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteRectOriginY;
+
+	                    //Draw the rectangle
+	                    ctx.fillStyle = layer.colour.toHTMLColour();
+	                    ctx.fillRect(_highlightXOffset, _highlightYOffset, absoluteRectWidth, absoluteRectHeight);
+	                }
+	            } else if (this.blendMode === "subtract") {
+	                if (pageIndex === this.origin.pageIndex) {
+	                    // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	                    // (to make it look like it is on top of a page in Diva)
+	                    var _highlightXOffset2 = renderer._getImageOffset(pageIndex).left - renderer._viewport.left + viewportPaddingX + absoluteRectOriginX,
+	                        _highlightYOffset2 = renderer._getImageOffset(pageIndex).top - renderer._viewport.top + viewportPaddingY + absoluteRectOriginY;
+
+	                    //Draw the rectangle
+	                    ctx.fillStyle = layer.colour.toHTMLColour();
+	                    ctx.clearRect(_highlightXOffset2, _highlightYOffset2, absoluteRectWidth, absoluteRectHeight);
+	                }
+	            }
+	        }
+
+	        /**
+	         * draws a rectangle of a certain layer in a canvas using absolute page coordinates
+	         * @param layer
+	         * @param pageIndex
+	         * @param zoomLevel
+	         * @param renderer
+	         * @param canvas
+	         */
+
+	    }, {
+	        key: 'drawOnPage',
+	        value: function drawOnPage(layer, pageIndex, zoomLevel, renderer, canvas) {
+	            var scaleRatio = Math.pow(2, zoomLevel),
+	                ctx = canvas.getContext('2d');
+
+	            // The following absolute values are experimental values to highlight the square on the first page of Salzinnes, CDN-Hsmu M2149.L4
+	            // The relative values are used to scale the highlights according to the zoom level on the page itself
+	            var absoluteRectOriginX = this.origin.relativeOriginX * scaleRatio,
+	                absoluteRectOriginY = this.origin.relativeOriginY * scaleRatio,
+	                absoluteRectWidth = this.relativeRectWidth * scaleRatio,
+	                absoluteRectHeight = this.relativeRectHeight * scaleRatio;
+
+	            if (this.blendMode === "select") {
+	                //TODO: SELECTION CODE HERE
+	                if (pageIndex === this.origin.pageIndex) {
+	                    //Draw the selection rectangle
+	                    ctx.fillStyle = 'rgba(147, 192, 255, 0.5)';
+	                    ctx.lineWidth = 30 / scaleRatio;
+	                    ctx.strokeStyle = 'rgba(97, 142, 205, 1)';
+	                    ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                    ctx.strokeRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                }
+	            }
+
+	            // TODO: Use padded coordinates
+	            else if (this.blendMode === "add") {
+	                    if (pageIndex === this.origin.pageIndex && layer.layerId === -1) // "Select Region" layer 
+	                        {
+	                            // Draw the rectangle with a border
+	                            ctx.fillStyle = layer.colour.toHTMLColour();
+	                            ctx.lineWidth = 1;
+	                            ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+	                            ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                            ctx.strokeRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                        } else if (pageIndex === this.origin.pageIndex) {
+	                        // Draw rectangle without border
+	                        ctx.fillStyle = layer.colour.toHTMLColour();
+	                        ctx.fillRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                    }
+	                } else if (this.blendMode === "subtract") {
+	                    if (pageIndex === this.origin.pageIndex) {
+	                        //Draw the rectangle
+	                        ctx.fillStyle = layer.colour.toHTMLColour();
+	                        ctx.clearRect(absoluteRectOriginX, absoluteRectOriginY, absoluteRectWidth, absoluteRectHeight);
+	                    }
+	                }
+	        }
+
+	        /**
+	         * Gets all the pixels spanned by a rectangle. Draws the image data that the rectangle covers (from the imageCanvas) in the drawingCanvas
+	         * @param layer
+	         * @param pageIndex
+	         * @param zoomLevel
+	         * @param renderer
+	         * @param drawingCanvas
+	         * @param imageCanvas
+	         */
+
+	    }, {
+	        key: 'getPixels',
+	        value: function getPixels(layer, pageIndex, zoomLevel, renderer, drawingCanvas, imageCanvas) {
+	            // FIXME: sometimes copying and pasting scaled image data goes beyond the rectangle (compute bounds using the scaleRatio)
+
+	            var scaleRatio = Math.pow(2, zoomLevel),
+	                pixelCtx = drawingCanvas.getContext('2d'),
+	                divaCtx = imageCanvas.getContext('2d');
+
+	            // The following absolute values are experimental values to highlight the square on the first page of Salzinnes, CDN-Hsmu M2149.L4
+	            // The relative values are used to scale the highlights according to the zoom level on the page itself
+	            var absoluteRectOriginX = this.origin.relativeOriginX * scaleRatio,
+	                absoluteRectOriginY = this.origin.relativeOriginY * scaleRatio,
+	                absoluteRectWidth = this.relativeRectWidth * scaleRatio,
+	                absoluteRectHeight = this.relativeRectHeight * scaleRatio;
+
+	            if (pageIndex === this.origin.pageIndex) {
+	                for (var row = Math.round(Math.min(absoluteRectOriginY, absoluteRectOriginY + absoluteRectHeight)); row < Math.max(absoluteRectOriginY, absoluteRectOriginY + absoluteRectHeight); row++) {
+	                    for (var col = Math.round(Math.min(absoluteRectOriginX, absoluteRectOriginX + absoluteRectWidth)); col < Math.max(absoluteRectOriginX, absoluteRectOriginX + absoluteRectWidth); col++) {
+	                        if (row >= 0 && col >= 0 && row < drawingCanvas.height && col < drawingCanvas.width) {
+	                            if (this.blendMode === "add") {
+	                                var paddedCoords = new _point.Point().getPaddedCoordinatesFromAbsolute(pageIndex, renderer, col, row),
+	                                    data = divaCtx.getImageData(paddedCoords.x, paddedCoords.y, 1, 1).data,
+	                                    colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
+
+	                                var maxLevelCol = col / scaleRatio * Math.pow(2, 5),
+	                                    // FIXME: Replace with maxZoomLevel
+	                                maxLevelRow = row / scaleRatio * Math.pow(2, 5);
+
+	                                pixelCtx.fillStyle = colour.toHTMLColour();
+	                                pixelCtx.fillRect(maxLevelCol, maxLevelRow, Math.pow(2, 5), Math.pow(2, 5));
+	                            } else if (this.blendMode === "subtract") {
+	                                pixelCtx.clearRect(col, row, 1, 1);
+	                            }
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	    }]);
+
+	    return Rectangle;
+	}(_shape.Shape);
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.Shape = undefined;
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
+
+
+	var _point = __webpack_require__(10);
+
+	var _colour = __webpack_require__(13);
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var Shape = exports.Shape = function () {
+	    function Shape(point, blendMode) {
+	        _classCallCheck(this, Shape);
+
+	        this.origin = point;
+	        this.type = "shape";
+	        this.blendMode = blendMode;
+	    }
+
+	    /**
+	     * Abstract method, to be overridden
+	     */
+
+
+	    _createClass(Shape, [{
+	        key: 'drawInViewport',
+	        value: function drawInViewport() {}
+
+	        /**
+	         * Abstract method, to be overridden
+	         */
+
+	    }, {
+	        key: 'drawOnPage',
+	        value: function drawOnPage() {}
+	    }, {
+	        key: 'changeBlendModeTo',
+	        value: function changeBlendModeTo(newBlendMode) {
+	            this.blendMode = newBlendMode;
+	        }
+
+	        /**
+	         * Gets all the pixels spanned by a shape given its set of edges. Draws the image data that the shape covers (from the imageCanvas) in the drawingCanvas
+	         * @param layer
+	         * @param pageIndex
+	         * @param zoomLevel
+	         * @param renderer
+	         * @param drawingCanvas
+	         * @param imageCanvas
+	         * @param ymax
+	         * @param ymin
+	         * @param pairOfEdges
+	         */
+
+	    }, {
+	        key: 'getPixels',
+	        value: function getPixels(layer, pageIndex, zoomLevel, renderer, drawingCanvas, imageCanvas, ymax, ymin, pairOfEdges) {
+	            var drawingCtx = drawingCanvas.getContext('2d'),
+	                imageCtx = imageCanvas.getContext('2d');
+
+	            // TODO: Check for horizontal or vertical lines
+	            // For every scan line
+	            for (var y = ymin; y < ymax; y++) {
+	                var intersectionPoints = [];
+
+	                // For every line calculate the intersection edges
+	                for (var e = 0; e < pairOfEdges.length; e++) {
+	                    // Calculate intersection with line
+	                    for (var p = 0; p < pairOfEdges[e].length - 1; p++) {
+	                        var x1 = pairOfEdges[e][p].absolutePaddedX,
+	                            y1 = pairOfEdges[e][p].absolutePaddedY,
+	                            x2 = pairOfEdges[e][p + 1].absolutePaddedX,
+	                            y2 = pairOfEdges[e][p + 1].absolutePaddedY;
+
+	                        //ctx.fillStyle = layer.colour.toHTMLColour();
+	                        var deltax = x2 - x1,
+	                            deltay = y2 - y1;
+
+	                        var x = x1 + deltax / deltay * (y - y1),
+	                            roundedX = Math.round(x);
+
+	                        if (y1 <= y && y2 > y || y2 <= y && y1 > y) {
+	                            intersectionPoints.push({
+	                                absolutePaddedX: roundedX,
+	                                absolutePaddedY: y
+	                            });
+	                        }
+	                    }
+	                }
+
+	                intersectionPoints.sort(function (a, b) {
+	                    return a.absolutePaddedX - b.absolutePaddedX;
+	                });
+
+	                if (intersectionPoints.length <= 0) continue;
+
+	                // Start filling
+	                for (var index = 0; index < intersectionPoints.length - 1; index++) {
+	                    // Draw from the first intersection to the next, stop drawing until you see a new intersection line
+	                    if (index % 2 === 0) {
+	                        var start = intersectionPoints[index].absolutePaddedX,
+	                            // This will contain the start of the x coords to fill
+	                        end = intersectionPoints[index + 1].absolutePaddedX,
+	                            // This will contain the end of the x coords to fill
+	                        _y = intersectionPoints[index].absolutePaddedY;
+
+	                        for (var fill = start; fill < end; fill++) {
+	                            // Remove padding to get absolute coordinates
+	                            var absoluteCoords = new _point.Point().getAbsoluteCoordinatesFromPadded(pageIndex, renderer, fill, _y);
+
+	                            if (this.blendMode === "add") {
+	                                // Necessary check because sometimes the brush draws outside of a page because of brush width
+	                                if (absoluteCoords.y >= 0 && absoluteCoords.x >= 0 && absoluteCoords.y <= drawingCanvas.height && absoluteCoords.x <= drawingCanvas.width) {
+	                                    // TODO: Can also pass in and fill a matrix
+	                                    var paddedCoords = new _point.Point().getPaddedCoordinatesFromAbsolute(pageIndex, renderer, absoluteCoords.x, absoluteCoords.y),
+	                                        data = imageCtx.getImageData(paddedCoords.x, paddedCoords.y, 1, 1).data,
+	                                        colour = new _colour.Colour(data[0], data[1], data[2], data[3]);
+
+	                                    drawingCtx.fillStyle = colour.toHTMLColour();
+	                                    drawingCtx.fillRect(absoluteCoords.x, absoluteCoords.y, 1, 1);
+	                                }
+	                            } else if (this.blendMode === "subtract") {
+	                                drawingCtx.clearRect(absoluteCoords.x, absoluteCoords.y, 1, 1);
+	                            }
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	    }]);
+
+	    return Shape;
+	}();
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
+	var Colour = exports.Colour = function () {
+	    function Colour(red, green, blue, alpha) {
+	        _classCallCheck(this, Colour);
+
+	        this.red = red;
+	        this.green = green;
+	        this.blue = blue;
+	        this.alpha = alpha;
+	    }
+
+	    /**
+	     * Turns the red, green, blue and opacity values into an HTML colour
+	     * @returns {string}
+	     */
+
+
+	    _createClass(Colour, [{
+	        key: "toHTMLColour",
+	        value: function toHTMLColour() {
+	            return "rgba(" + this.red + ", " + this.green + ", " + this.blue + ", " + this.alpha + ")";
+	        }
+
+	        /**
+	         * Returns the Colour object in a hexadecimal string format (#RRGGBB)
+	         * @returns {string}
+	         */
+
+	    }, {
+	        key: "toHexString",
+	        value: function toHexString() {
+	            var hexString = "#";
+
+	            var red = this.red.toString(16),
+	                green = this.green.toString(16),
+	                blue = this.blue.toString(16);
+
+	            if (red.length === 1) hexString = hexString.concat("0");
+	            hexString = hexString.concat(red);
+
+	            if (green.length === 1) hexString = hexString.concat("0");
+	            hexString = hexString.concat(green);
+
+	            if (blue.length === 1) hexString = hexString.concat("0");
+	            hexString = hexString.concat(blue);
+
+	            return hexString;
+	        }
+
+	        /**
+	         * Compares 2 colours to each other based on a certain tolerance
+	         * @param colour
+	         * @param tolerance
+	         * @returns {boolean}
+	         */
+
+	    }, {
+	        key: "isSimilarTo",
+	        value: function isSimilarTo(colour, tolerance) {
+	            if (!(colour.red >= this.red - tolerance && colour.red <= this.red + tolerance)) return false;
+
+	            if (!(colour.blue >= this.blue - tolerance && colour.blue <= this.blue + tolerance)) return false;
+
+	            if (!(colour.green >= this.green - tolerance && colour.green <= this.green + tolerance)) return false;
+
+	            return true;
+	        }
+	    }]);
+
+	    return Colour;
+	}();
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.Layer = undefined;
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
+
+
+	var _path = __webpack_require__(15);
+
+	var _point = __webpack_require__(10);
+
+	var _action = __webpack_require__(16);
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var Layer = exports.Layer = function () {
+	    function Layer(layerId, colour, layerName, pixelInstance, layerOpacity) {
+	        _classCallCheck(this, Layer);
+
+	        this.layerId = layerId;
+	        this.shapes = [];
+	        this.paths = [];
+	        this.colour = colour;
+	        this.layerName = layerName;
+	        this.canvas = null;
+	        this.ctx = null;
+	        this.actions = [];
+	        this.activated = true;
+	        this.layerOpacity = layerOpacity;
+	        this.pixelInstance = pixelInstance;
+	        this.pageIndex = this.pixelInstance.core.getSettings().currentPageIndex;
+	        this.backgroundImageCanvas = null;
+	        this.pastedRegions = [];
+	        this.cloneCanvas();
+	    }
+
+	    /**
+	     * Creates a layer canvas that is the same size as a page in diva
+	     */
+
+
+	    _createClass(Layer, [{
+	        key: 'cloneCanvas',
+	        value: function cloneCanvas() {
+	            var maxZoomLevel = this.pixelInstance.core.getSettings().maxZoomLevel;
+
+	            var height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoomLevel).height,
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoomLevel).width;
+
+	            this.canvas = document.createElement('canvas');
+	            this.canvas.setAttribute("class", "pixel-canvas");
+	            this.canvas.setAttribute("id", "layer-" + this.layerId + "-canvas");
+	            this.canvas.width = width;
+	            this.canvas.height = height;
+
+	            this.ctx = this.canvas.getContext('2d');
+
+	            this.resizeLayerCanvasToZoomLevel(this.pixelInstance.core.getSettings().zoomLevel);
+	            this.placeLayerCanvasOnTopOfEditingPage();
+
+	            this.backgroundImageCanvas = document.createElement("canvas");
+	            this.backgroundImageCanvas.width = this.canvas.width;
+	            this.backgroundImageCanvas.height = this.canvas.height;
+	        }
+	    }, {
+	        key: 'resizeLayerCanvasToZoomLevel',
+	        value: function resizeLayerCanvasToZoomLevel(zoomLevel) {
+	            var floorZoom = Math.floor(zoomLevel),
+	                extra = zoomLevel - floorZoom,
+	                scaleRatio = Math.pow(2, extra);
+
+	            var height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, floorZoom).height,
+	                width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, floorZoom).width;
+
+	            width *= scaleRatio;
+	            height *= scaleRatio;
+
+	            this.canvas.style.width = width + "px";
+	            this.canvas.style.height = height + "px";
+
+	            this.placeLayerCanvasOnTopOfEditingPage();
+
+	            if (this.pixelInstance.uiManager !== null) this.pixelInstance.uiManager.resizeBrushCursor();
+	        }
+	    }, {
+	        key: 'placeLayerCanvasOnTopOfEditingPage',
+	        value: function placeLayerCanvasOnTopOfEditingPage() {
+	            var zoomLevel = this.pixelInstance.core.getSettings().zoomLevel;
+
+	            var coords = new _point.Point(0, 0, 0).getCoordsInViewport(zoomLevel, this.pageIndex, this.pixelInstance.core.getSettings().renderer);
+
+	            this.canvas.style.left = coords.x + "px";
+	            this.canvas.style.top = coords.y + "px";
+	        }
+	    }, {
+	        key: 'placeCanvasAfterElement',
+	        value: function placeCanvasAfterElement(element) {
+	            element.parentNode.insertBefore(this.canvas, element.nextSibling);
+	        }
+	    }, {
+	        key: 'getCanvas',
+	        value: function getCanvas() {
+	            return this.canvas;
+	        }
+	    }, {
+	        key: 'getCtx',
+	        value: function getCtx() {
+	            return this.ctx;
+	        }
+	    }, {
+	        key: 'clearCtx',
+	        value: function clearCtx() {
+	            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+	        }
+	    }, {
+	        key: 'updateLayerName',
+	        value: function updateLayerName(newLayerName) {
+	            this.layerName = newLayerName;
+	        }
+	    }, {
+	        key: 'addShapeToLayer',
+	        value: function addShapeToLayer(shape) {
+	            this.shapes.push(shape);
+	            this.addAction(new _action.Action(shape, this));
+	        }
+	    }, {
+	        key: 'addPathToLayer',
+	        value: function addPathToLayer(path) {
+	            this.paths.push(path);
+	            this.addAction(new _action.Action(path, this));
+	        }
+
+	        /**
+	         * Creates a new path that has the brush size selector width
+	         * @param point
+	         * @param blendMode
+	         */
+
+	    }, {
+	        key: 'addToCurrentPath',
+	        value: function addToCurrentPath(point, blendMode) {
+	            if (this.paths.length === 0) this.createNewPath(this.pixelInstance.uiManager.getBrushSizeSelectorValue(), blendMode);
+
+	            this.paths[this.paths.length - 1].addPointToPath(point);
+	        }
+	    }, {
+	        key: 'getCurrentPath',
+	        value: function getCurrentPath() {
+	            if (this.paths.length > 0) return this.paths[this.paths.length - 1];else return null;
+	        }
+	    }, {
+	        key: 'createNewPath',
+	        value: function createNewPath(brushSize, blendMode) {
+	            var path = new _path.Path(brushSize, blendMode);
+	            this.paths.push(path);
+	            this.addAction(new _action.Action(path, this));
+	        }
+	    }, {
+	        key: 'removePathFromLayer',
+	        value: function removePathFromLayer(path) {
+	            var _this = this;
+
+	            var index = this.paths.indexOf(path);
+	            this.paths.splice(index, 1);
+
+	            this.actions.forEach(function (action) {
+	                if (action.object === path) {
+	                    _this.removeAction(action);
+	                }
+	            });
+	        }
+	    }, {
+	        key: 'removeShapeFromLayer',
+	        value: function removeShapeFromLayer(shape) {
+	            var _this2 = this;
+
+	            var index = this.shapes.indexOf(shape);
+	            this.shapes.splice(index, 1);
+
+	            this.actions.forEach(function (action) {
+	                if (action.object === shape) _this2.removeAction(action);
+	            });
+	        }
+	    }, {
+	        key: 'removeSelectionFromLayer',
+	        value: function removeSelectionFromLayer(selection) {
+	            var _this3 = this;
+
+	            var index = this.pastedRegions.indexOf(selection);
+	            this.pastedRegions.splice(index, 1);
+
+	            this.actions.forEach(function (action) {
+	                if (action.object === selection) _this3.removeAction(action);
+	            });
+	        }
+	    }, {
+	        key: 'setOpacity',
+	        value: function setOpacity(opacity) {
+	            this.colour.alpha = opacity;
+	        }
+	    }, {
+	        key: 'getOpacity',
+	        value: function getOpacity() {
+	            return this.colour.alpha;
+	        }
+	    }, {
+	        key: 'getCurrentShape',
+	        value: function getCurrentShape() {
+	            if (this.shapes.length > 0) {
+	                return this.shapes[this.shapes.length - 1];
+	            } else {
+	                return null;
+	            }
+	        }
+	    }, {
+	        key: 'isActivated',
+	        value: function isActivated() {
+	            return this.activated;
+	        }
+	    }, {
+	        key: 'setLayerOpacity',
+	        value: function setLayerOpacity(layerOpacity) {
+	            this.layerOpacity = layerOpacity;
+	        }
+	    }, {
+	        key: 'getLayerOpacity',
+	        value: function getLayerOpacity() {
+	            return this.layerOpacity;
+	        }
+	    }, {
+	        key: 'getLayerOpacityCSSString',
+	        value: function getLayerOpacityCSSString() {
+	            return "opacity : " + this.layerOpacity;
+	        }
+	    }, {
+	        key: 'drawLayer',
+	        value: function drawLayer(zoomLevel, canvas) {
+	            if (!this.isActivated()) return;
+
+	            this.drawLayerInPageCoords(zoomLevel, canvas, this.pageIndex);
+	        }
+	    }, {
+	        key: 'drawLayerInPageCoords',
+	        value: function drawLayerInPageCoords(zoomLevel, canvas, pageIndex) {
+	            var _this4 = this;
+
+	            var ctx = canvas.getContext('2d');
+	            // Clear canvas
+	            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	            // Redraw PreBinarized Image on layer canvas
+	            if (this.backgroundImageCanvas !== null) ctx.drawImage(this.backgroundImageCanvas, 0, 0);
+
+	            // Redraw all actions
+	            this.actions.forEach(function (action) {
+	                action.object.drawOnPage(_this4, pageIndex, zoomLevel, _this4.pixelInstance.core.getSettings().renderer, canvas);
+	            });
+	        }
+	    }, {
+	        key: 'setBackgroundImageCanvas',
+	        value: function setBackgroundImageCanvas(canvas) {
+	            this.backgroundImageCanvas = canvas;
+	        }
+	    }, {
+	        key: 'addToPastedRegions',
+	        value: function addToPastedRegions(selection) {
+	            this.pastedRegions.push(selection);
+	            this.addAction(new _action.Action(selection, this));
+	        }
+	    }, {
+	        key: 'addAction',
+	        value: function addAction(action) {
+	            this.actions.push(action);
+
+	            // Selection is temporary and only concerns this layer thus no need to add to global actions
+	            if (!(action.object.type === "selection" && action.object.selectedShape.blendMode === "select")) this.pixelInstance.actions.push(action);
+	        }
+	    }, {
+	        key: 'removeAction',
+	        value: function removeAction(action) {
+	            var actionIndex = this.actions.indexOf(action);
+	            this.actions.splice(actionIndex, 1);
+
+	            var globalActionIndex = this.pixelInstance.actions.indexOf(action);
+	            this.pixelInstance.actions.splice(globalActionIndex, 1);
+	        }
+	    }, {
+	        key: 'displayColourOptions',
+	        value: function displayColourOptions() {
+	            // TODO: Implement function
+	            console.log("colour clicked here");
+	        }
+
+	        /**
+	         * Displays the layer options (such as opacity) as a drop down from the layer selectors
+	         */
+
+	    }, {
+	        key: 'displayLayerOptions',
+	        value: function displayLayerOptions() {
+	            var layerOptionsDiv = document.getElementById("layer-" + this.layerId + "-options");
+
+	            if (layerOptionsDiv.classList.contains("unchecked-layer-settings")) //It is unchecked, check it
+	                {
+	                    layerOptionsDiv.classList.remove("unchecked-layer-settings");
+	                    layerOptionsDiv.classList.add("checked-layer-settings");
+	                    this.pixelInstance.uiManager.createOpacitySlider(this, layerOptionsDiv.parentElement.parentElement, layerOptionsDiv.parentElement);
+	                } else {
+	                layerOptionsDiv.classList.remove("checked-layer-settings");
+	                layerOptionsDiv.classList.add("unchecked-layer-settings");
+	                this.pixelInstance.uiManager.destroyOpacitySlider(this);
+	            }
+	        }
+
+	        /**
+	         * Visually displays a layer
+	         */
+
+	    }, {
+	        key: 'activateLayer',
+	        value: function activateLayer() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            layerActivationDiv.classList.remove("layer-deactivated");
+	            layerActivationDiv.classList.add("layer-activated");
+	            this.getCanvas().style.opacity = this.getLayerOpacity();
+
+	            if (this.layerId === this.pixelInstance.background.layerId) // Background
+	                {
+	                    this.activated = true;
+	                } else {
+	                this.activated = true;
+	                this.pixelInstance.redrawLayer(this);
+	            }
+	        }
+	    }, {
+	        key: 'deactivateLayer',
+	        value: function deactivateLayer() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            layerActivationDiv.classList.remove("layer-activated");
+	            layerActivationDiv.classList.add("layer-deactivated");
+	            this.activated = false;
+
+	            if (this.layerId === this.pixelInstance.background.layerId) // Background
+	                {
+	                    this.getCanvas().style.opacity = 0;
+	                } else {
+	                this.clearCtx();
+	            }
+	        }
+	    }, {
+	        key: 'toggleLayerActivation',
+	        value: function toggleLayerActivation() {
+	            var layerActivationDiv = document.getElementById("layer-" + this.layerId + "-activation");
+	            if (layerActivationDiv.classList.contains("layer-deactivated")) {
+	                this.activateLayer();
+	            } else {
+	                this.deactivateLayer();
+	            }
+	        }
+	    }]);
+
+	    return Layer;
+	}();
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
+	var Path = exports.Path = function () {
+	    function Path(brushSize, blendMode) {
+	        _classCallCheck(this, Path);
+
+	        this.points = [];
+	        this.brushSize = brushSize;
+	        this.type = "path";
+	        this.blendMode = blendMode;
+	        this.lastAbsX = 0;
+	        this.lastAbsY = 0;
+	    }
+
+	    _createClass(Path, [{
+	        key: "addPointToPath",
+	        value: function addPointToPath(point) {
+	            this.points.push(point);
+	        }
+	    }, {
+	        key: "drawInViewport",
+	        value: function drawInViewport(layer, pageIndex, zoomLevel, renderer, canvas) {
+	            var _this = this;
+
+	            var isDown = false;
+	            this.points.forEach(function (point) {
+	                _this.connectPoint(layer, point, pageIndex, zoomLevel, isDown, renderer, canvas, "viewport");
+	                isDown = true;
+	            });
+	        }
+	    }, {
+	        key: "drawOnPage",
+	        value: function drawOnPage(layer, pageIndex, zoomLevel, renderer, canvas) {
+	            var _this2 = this;
+
+	            var isDown = false;
+	            this.points.forEach(function (point) {
+	                _this2.connectPoint(layer, point, pageIndex, zoomLevel, isDown, renderer, canvas, "page");
+	                isDown = true;
+	            });
+	        }
+
+	        /**
+	         * Calculates the coordinates of the point to be added depending on the specified coordinates system
+	         * Places a point in the path
+	         * Only connects a point to the previous on if isDown is true
+	         * This is mainly used when the user is in the process of drawing the path
+	         * @param layer
+	         * @param point
+	         * @param pageIndex
+	         * @param zoomLevel
+	         * @param isDown
+	         * @param renderer
+	         * @param canvas
+	         * @param coordinatesSystem
+	         */
+
+	    }, {
+	        key: "connectPoint",
+	        value: function connectPoint(layer, point, pageIndex, zoomLevel, isDown, renderer, canvas, coordinatesSystem) {
+	            var scaleRatio = Math.pow(2, zoomLevel),
+	                ctx = canvas.getContext('2d');
+
+	            if (pageIndex !== point.pageIndex) return;
+
+	            // Calculates where the highlights should be drawn as a function of the whole webpage coordinates
+	            // (to make it look like it is on top of a page in Diva)
+	            var coordinates = void 0;
+	            switch (coordinatesSystem) {
+	                case "viewport":
+	                    coordinates = point.getCoordsInViewport(zoomLevel, pageIndex, renderer);
+	                    break;
+	                case "page":
+	                    coordinates = point.getCoordsInPage(zoomLevel);
+	                    break;
+	                default:
+	                    coordinates = point.getCoordsInViewport(zoomLevel, pageIndex, renderer);
+	            }
+
+	            var highlightXOffset = coordinates.x,
+	                highlightYOffset = coordinates.y;
+
+	            if (isDown) {
+	                if (this.blendMode === "add") {
+	                    ctx.globalCompositeOperation = "source-over";
+	                    ctx.beginPath();
+	                    ctx.strokeStyle = layer.colour.toHTMLColour();
+	                    ctx.lineWidth = this.brushSize * scaleRatio;
+	                    ctx.lineJoin = "round";
+	                    ctx.moveTo(this.lastAbsX, this.lastAbsY);
+	                    ctx.lineTo(highlightXOffset, highlightYOffset);
+	                    ctx.closePath();
+	                    ctx.stroke();
+	                } else if (this.blendMode === "subtract") {
+	                    ctx.globalCompositeOperation = "destination-out";
+	                    ctx.beginPath();
+	                    ctx.strokeStyle = "rgba(250,250,250,1)"; // It is important to have the alpha always equal to 1. RGB are not important when erasing
+	                    ctx.lineWidth = this.brushSize * scaleRatio;
+	                    ctx.lineJoin = "round";
+	                    ctx.moveTo(this.lastAbsX, this.lastAbsY);
+	                    ctx.lineTo(highlightXOffset, highlightYOffset);
+	                    ctx.closePath();
+	                    ctx.stroke();
+	                }
+	                ctx.globalCompositeOperation = "source-over";
+	            }
+	            this.lastAbsX = highlightXOffset;
+	            this.lastAbsY = highlightYOffset;
+	        }
+	    }]);
+
+	    return Path;
+	}();
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/*jshint esversion: 6 */
+	var Action = exports.Action = function Action(object, layer) {
+	    _classCallCheck(this, Action);
+
+	    this.object = object;
+	    this.layer = layer;
+	};
+
+/***/ }),
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2691,9 +3821,9 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _colour = __webpack_require__(6);
+	var _colour = __webpack_require__(13);
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(10);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3152,7 +4282,7 @@
 	}();
 
 /***/ }),
-/* 11 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3165,9 +4295,9 @@
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*jshint esversion: 6 */
 
 
-	var _point = __webpack_require__(5);
+	var _point = __webpack_require__(10);
 
-	var _exceptions = __webpack_require__(12);
+	var _exceptions = __webpack_require__(19);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3475,6 +4605,7 @@
 	                //sets draggable attribute to false on double click
 	                //only allows the onblur event after a double click
 	                layerName.addEventListener('dblclick', function (e) {
+	                    // jshint ignore:line
 	                    _this2.pixelInstance.editLayerName(e, layerName, layerDiv, false, duringSwap, layer);
 	                    layerName.onblur = function (e) {
 	                        _this2.pixelInstance.editLayerName(e, layerName, layerDiv, true, duringSwap, layer);
@@ -4106,7 +5237,7 @@
 	}();
 
 /***/ }),
-/* 12 */
+/* 19 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4153,7 +5284,7 @@
 	}(PixelException);
 
 /***/ }),
-/* 13 */
+/* 20 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4262,7 +5393,7 @@
 	}();
 
 /***/ }),
-/* 14 */
+/* 21 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4358,7 +5489,7 @@
 	}();
 
 /***/ }),
-/* 15 */
+/* 22 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -4494,7 +5625,7 @@
 	}();
 
 /***/ }),
-/* 16 */
+/* 23 */
 /***/ (function(module, exports) {
 
 	'use strict';

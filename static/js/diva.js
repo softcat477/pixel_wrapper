@@ -9658,7 +9658,7 @@
 	
 	    // Setup
 	    // Times are in milliseconds from a basically arbitrary start
-	    var start = Date.now();
+	    var start = now(); // jshint ignore:line
 	    var end = start + durationMs;
 	
 	    var tweenFns = {};
@@ -9685,7 +9685,7 @@
 	    };
 	
 	    function update() {
-	        var current = Date.now();
+	        var current = now(); // jshint ignore:line
 	        var elapsed = Math.min((current - start) / durationMs, 1);
 	
 	        updateValues(elapsed);
