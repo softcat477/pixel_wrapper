@@ -31,7 +31,7 @@ function animate (options)
 
     // Setup
     // Times are in milliseconds from a basically arbitrary start
-    const start = Date.now();
+    const start = now(); // jshint ignore:line
     const end = start + durationMs;
 
     const tweenFns = {};
@@ -61,7 +61,7 @@ function animate (options)
 
     function update()
     {
-        const current = Date.now();
+        const current = now(); // jshint ignore:line
         const elapsed = Math.min((current - start) / durationMs, 1);
 
         updateValues(elapsed);
