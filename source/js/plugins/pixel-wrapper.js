@@ -84,15 +84,16 @@ export class PixelWrapper
         this.pixelInstance.tools.currentTool = "rectangle";
 
         // Only create default layers once
-        if (this.layers.length !== 1) {
+        if (this.layers.length !== 1) 
             return;
-        }
 
         let numLayers = numberInputLayers;
 
         // Ask user how many layers to create if there's no input
-        if (numberInputLayers === 0) {
-            while (numLayers <= 0 || numLayers > 7) {
+        if (numberInputLayers === 0) 
+        {
+            while (numLayers <= 0 || numLayers > 7) 
+            {
                 numLayers = parseInt(prompt("How many layers will you classify?\n" +
                 "This must be the same number as the number of output ports.", 3));
             }
@@ -103,9 +104,11 @@ export class PixelWrapper
 
         // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
         // so start at 2, and ignore one input layer which gets assigned to layer 1. Max 7 input
-        for (var i = 2; i < numLayers + 1; i++) { 
+        for (var i = 2; i < numLayers + 1; i++) 
+        { 
             let colour;
-            switch (i) {
+            switch (i) 
+            {
                 case 2:
                     colour = new Colour(255, 51, 102, 1);
                     break;
@@ -145,8 +148,8 @@ export class PixelWrapper
         let count = this.layers.length;
         let urlList = [];
 
-        this.layers.forEach((layer) => {
-            
+        this.layers.forEach((layer) => 
+        {    
             console.log(layer.layerId + " " + layer.layerName);
 
             let dataURL = layer.getCanvas().toDataURL();
@@ -190,7 +193,8 @@ export class PixelWrapper
             };
 
         // Add selection regions to the backgroundLayer
-        selectRegions.forEach((region) => {
+        selectRegions.forEach((region) => 
+        {
             // Get shape dimensions
             let x = region.origin.getCoordsInPage(maxZoom).x,
                 y = region.origin.getCoordsInPage(maxZoom).y,
@@ -198,9 +202,10 @@ export class PixelWrapper
                 rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
                 rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
-            if (region.blendMode === "subtract") { 
+            if (region.blendMode === "subtract") 
                 rect.changeBlendModeTo("subtract");
-            } else { 
+            else 
+            { 
                 regionsInfo.count++;
                 regionsInfo.sumHeight += rectHeight;
             }
@@ -210,7 +215,8 @@ export class PixelWrapper
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
         // Alert and return if user hasn't created a selection region
-        if (regionsInfo.count === 0) {
+        if (regionsInfo.count === 0) 
+        {
             alert("You haven't created any select regions!");
             this.layers.unshift(this.selectRegionLayer);
             return;
@@ -221,7 +227,8 @@ export class PixelWrapper
         // Total number of regions to iterate over (over all layers)
         this.totalRegionCount = this.layers.length * regionsInfo.count;
 
-        this.layers.forEach((layer) => {
+        this.layers.forEach((layer) => 
+        {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
@@ -232,11 +239,11 @@ export class PixelWrapper
             layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
             // Go over every selection region and subtract layer within this region from background
-            for (var i = 0; i < selectRegions.length; i++) {
+            for (var i = 0; i < selectRegions.length; i++) 
+            {
                 let region = selectRegions[i];
-                if (region.blendMode !== "add") {
+                if (region.blendMode !== "add") 
                     continue;
-                }
                 let dimensions = {
                     x: region.origin.getCoordsInPage(maxZoom).x,
                     y: region.origin.getCoordsInPage(maxZoom).y,
@@ -259,54 +266,65 @@ export class PixelWrapper
             height = row + dimensions.height, 
             pixelCtx = layerCanvas.getContext('2d');
 
-        let doChunk = () => { 
+        let doChunk = () => 
+        { 
             var cnt = chunkSize;
             chunkNum++;
-            while (cnt--) { 
+            while (cnt--) 
+            { 
                 if (row >= height)
                     break;
-                if (col < width) {
+                if (col < width) 
+                {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
                     // data is RGBA for one pixel, data[3] is alpha
-                    if (data[3] !== 0) { 
+                    if (data[3] !== 0) 
+                    { 
                         let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
                     col++;
                 }
-                else { // Reached end of row, jump to next
+                else 
+                { // Reached end of row, jump to next
                     row++;
                     col = dimensions.x;
                 }
             }
             // If progress not complete, recall this function
-            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) { 
+            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) 
                 setTimeout(doChunk, 1); 
-            }
         };  
         doChunk();
     }
 
     progress (row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo) 
     {
-        if (row === height || this.exportInterrupted) {
+        if (row === height || this.exportInterrupted) 
             this.totalRegionCount -= 1;
-        }
-        if (row < height && !this.exportInterrupted) {
+        if (row < height && !this.exportInterrupted) 
+        {
             let percentage = (regionsInfo.count * chunkNum * chunkSize) * 100 / (regionsInfo.sumHeight * chunkSize),
                 roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
             this.pixelInstance.uiManager.updateProgress(roundedPercentage);
             return {
                 incomplete: true
             };
-        } else {
-            if (this.exportInterrupted && (this.totalRegionCount === 0)) {
+        } 
+        else 
+        {
+            if (this.exportInterrupted && (this.totalRegionCount === 0)) 
+            {
                 this.exportInterrupted = false;
                 this.uiManager.destroyExportElements();
                 this.layers.unshift(this.selectRegionLayer);
-            } else if (this.exportInterrupted) {
+            } 
+            else if (this.exportInterrupted) 
+            {
                 // Do nothing and wait until last layer has finished processing to cancel
-            } else if (this.totalRegionCount === 0) { // Done generating background layer
+            } 
+            else if (this.totalRegionCount === 0) 
+            { // Done generating background layer
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();
