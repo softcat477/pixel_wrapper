@@ -64,7 +64,9 @@ export class PixelWrapper
         rodanExportButton.appendChild(rodanExportText);
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
-        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));    
+        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader')); 
+
+        return true;   
     }
 
     destroyButtons ()
@@ -72,6 +74,8 @@ export class PixelWrapper
         let rodanExportButton = document.getElementById("rodan-export-button");
 
         rodanExportButton.parentNode.removeChild(rodanExportButton);
+
+        return true;
     }
 
     /**
@@ -351,7 +355,7 @@ export class PixelWrapper
                 imageCanvas.height = layer.getCanvas().height;
                 let ctx = imageCanvas.getContext("2d");
 
-                ctx.drawImage(img,0,0);
+                ctx.drawImage(img, 0, 0);
 
                 let imageData = ctx.getImageData(0, 0, layer.getCanvas().width, layer.getCanvas().height),
                     data = imageData.data;

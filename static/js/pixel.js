@@ -1256,6 +1256,8 @@
 	            rodanExportButton.addEventListener("click", this.exportToRodan);
 
 	            document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
+
+	            return true;
 	        }
 	    }, {
 	        key: 'destroyButtons',

@@ -19,6 +19,8 @@
   "dependencies": {
     "array.prototype.fill": "^1.0.2",
     "babel-preset-env": "^1.7.0",
+    "es6-promise": "^4.2.4",
+    "isomorphic-fetch": "^2.2.1",
     "lodash.maxby": "^4.6.0",
     "mocha": "^5.2.0",
     "url-search-params": "^0.6.1",
