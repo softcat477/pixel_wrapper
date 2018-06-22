@@ -42,7 +42,11 @@ describe('Check Proper Plugin Creation', () => {
         const actions = browser.actions();
         await actions.click(pluginIcon).perform();
 
-        let tutorialProgress = await browser.findElement(By.id('tutorial-progress')).getText();
-        expect(tutorialProgress).toBe('1/16');
+        let tutorialProgress = await browser.findElement(By.id('tutorial-div'));
+        expect(tutorialProgress).toBeDefined();
+
+        // close tutorial
+        let tutorialFooter = await browser.findElement(By.id('modal-footer'));
+        await actions.click(tutorialFooter).perform();
     });
 });
