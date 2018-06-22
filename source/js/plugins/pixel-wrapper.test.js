@@ -25,7 +25,7 @@ afterAll(() => {
     browser.quit();
 });
 
-describe('Page Rendered', () => {
+describe('Check Proper Plugin Creation', () => {
     var pluginIcon;
 
     test('page title matches', async () => {
