@@ -74,5 +74,12 @@ If this is the case, make sure to run ```gulp develop:rodan``` from the ```pixel
 
 If you make any changes to the css files, you'll need to move them manually the ```pixel_wrapper/static/css``` folder.
 
-### Note
-The current implementation dissociates the wrapper from Diva.js. 
+## Testing
+Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.github.io/selenium/docs/api/javascript/index.html), and requires a web browser ([FireFox](https://www.mozilla.org/en-US/firefox/), make sure you have the latest version if already installed), and its driver ([`geckodriver`](https://github.com/mozilla/geckodriver/releases/)). 
+
+- Once you install `geckodriver`, place it in your system [PATH](https://en.wikipedia.org/wiki/PATH_%28variable%29), perhaps like so
+  ```
+  mv ~/Downloads/geckodriver /usr/local/bin
+  ```
+- You can access the `pixel-wrapper.test.js` file in `source/js/plugins` in order to add/remove/alter existing tests. 
+- Run `npm test` in order to run them.
