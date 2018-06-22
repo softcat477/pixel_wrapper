@@ -65,8 +65,6 @@ export class PixelWrapper
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
         document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader')); 
-
-        return true;   
     }
 
     destroyButtons ()
@@ -74,8 +72,6 @@ export class PixelWrapper
         let rodanExportButton = document.getElementById("rodan-export-button");
 
         rodanExportButton.parentNode.removeChild(rodanExportButton);
-
-        return true;
     }
 
     /**

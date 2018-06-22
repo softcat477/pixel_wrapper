@@ -587,6 +587,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
+	exports.Diva = undefined;
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 	
@@ -641,7 +642,7 @@
 	 *
 	 *
 	 **/
-	var Diva = function () {
+	var Diva = exports.Diva = function () {
 	    function Diva(element, options) {
 	        _classCallCheck(this, Diva);
 	
