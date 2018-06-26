@@ -87,5 +87,5 @@ Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.gi
     ```javascript
     const url = "your Pixel.js url"; // line 6
     ```
-  - Make sure the URL is not `localhost`, but rather your actual IP address. You might need to change the `ALLOWED_HOSTS` parameter in the Rodan `settings.py`.
+  - This will not pass the Travis CI build, since `Pixel.js` will be served at `localhost` which won't work. However, local testing will work properly. 
 - Run `npm test` to run the tests.
