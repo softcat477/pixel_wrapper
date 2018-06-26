@@ -27,7 +27,7 @@ A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [
       # Paths to other jobs
     )
     ```
-  - Increase `RODAN_RUNJOB_WORKING_USER_EXPIRY_SECONDS` (line 87) from `15` to `150000`.
+  - Increase `RODAN_RUNJOB_WORKING_USER_EXPIRY_SECONDS` (line 87) from `15` to `15000000`.
 - In `RODAN_JOB_PACKAGES`, check if `rodan.jobs.pil-rodan` is included in the job paths.
   - If `pil-rodan` is not in the list, clone https://github.com/DDMAL/pil-rodan.git to the jobs folder, like in the first step and add its path to the list of rodan job packages like so:
     ``` python
@@ -82,4 +82,10 @@ Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.gi
   mv ~/Downloads/geckodriver /usr/local/bin
   ```
 - You can access the `pixel-wrapper.test.js` file in `source/js/plugins` in order to add/remove/alter existing tests. 
-- Run `npm test` in order to run them.
+- Before running, you must set the proper URL for the Selenium `WebDriver` to fetch. 
+  - To do this, open the `Pixel.js` job within Rodan (go to `Run Jobs` and open `Pixel_js`). Get the URL of the new window, and update the `url` variable in `pixel-wrapper.test.js`:
+    ```javascript
+    const url = "your Pixel.js url"; // line 6
+    ```
+  - Make sure the URL is not `localhost`, but rather your actual IP address. You might need to change the `ALLOWED_HOSTS` parameter in the Rodan `settings.py`.
+- Run `npm test` to run the tests.
