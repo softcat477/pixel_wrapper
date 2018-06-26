@@ -3,7 +3,7 @@
 const {Builder, By, Key, until} = require('selenium-webdriver');
 const firefox = require('selenium-webdriver/firefox');
 // this is a Pixel.js job in Rodan
-const url = 'http://132.206.14.127:8000/interactive/bb128fdf-b30a-4322-ac87-a475ec5347ff/4245e880-5b05-4d11-89d3-f4128103c997/';
+const url = process.env.PIXEL_URL;
 
 jest.setTimeout('45000');
 
