@@ -58,7 +58,7 @@ Here are some user-level instructions on adding a pixel.js job in RODAN.
 - Choose png or tiff resource -> add -> input square should be green now
 - Workflow header tab -> run
 
-### Setting Up the Ports
+### Port Setup
 - You must create however many layers that you wish to classify as the input ports.
   - Do this by right clicking on the Pixel job, clicking on ports, and adding/deleting input ports as needed.
   - For example, if you're working with 3 layers (music symbols, text, and staff lines), then create three input ports.
@@ -78,14 +78,19 @@ If you make any changes to the css files, you'll need to move them manually the 
 Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.github.io/selenium/docs/api/javascript/index.html), and requires a web browser ([FireFox](https://www.mozilla.org/en-US/firefox/), make sure you have the latest version if already installed), and its driver ([`geckodriver`](https://github.com/mozilla/geckodriver/releases/)). 
 
 - Once you install `geckodriver`, place it in your system [PATH](https://en.wikipedia.org/wiki/PATH_%28variable%29), perhaps like so
-  ```
+  ``` bash
   mv ~/Downloads/geckodriver /usr/local/bin
   ```
 - You can access the `pixel-wrapper.test.js` file in `source/js/plugins` in order to add/remove/alter existing tests. 
-- Before running, you must set the proper URL for the Selenium `WebDriver` to fetch. 
-  - To do this, open the `Pixel.js` job within Rodan (go to `Run Jobs` and open `Pixel_js`). Get the URL of the new window, and update the `url` variable in `pixel-wrapper.test.js`:
+- Before running, you must set the proper URLs for the Selenium `WebDriver` to fetch. To do this, you'll need to create two Pixel jobs in Rodan. 
+  - The first `Pixel.js` job (go to `Run Jobs` and open `Pixel_js`) should have one input layer (so two input ports total including the image). The number of output layers _for the unit tests_ don't matter. Get the URL of the new window, and update the `url` variable in `pixel-wrapper.test.js`:
     ```javascript
-    const url = "your Pixel.js url"; // line 6
+    const url = "the first Pixel.js job's url"; // line 6
     ```
-  - This will not pass the Travis CI build, since `Pixel.js` will be served at `localhost` which won't work. However, local testing will work properly. 
+  - The second `Pixel.js` job should have no input layers. Get the URL of this window, and update the `urlNoInput` variable like so:
+    ```javascript
+    const urlNoInput = "the second Pixel.js job's url"; // line 7
+    ```
+  - Make sure to keep these jobs running in Rodan anytime you wish to run any tests.
 - Run `npm test` to run the tests.
+> *Note*: This will not pass the Travis CI build, since the `Pixel.js` jobs will be served at `localhost` which Travis cannot reach. However, local testing will work properly. 

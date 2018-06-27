@@ -3,7 +3,8 @@
 const {Builder, By, Key, until} = require('selenium-webdriver');
 const firefox = require('selenium-webdriver/firefox');
 // this is a Pixel.js job in Rodan
-const url = process.env.PIXEL_URL;
+const urlInput = process.env.PIXEL_URL_INPUT;
+const urlNoInput = process.env.PIXEL_URL_NO_INPUT;
 
 jest.setTimeout('45000');
 
@@ -19,14 +20,15 @@ beforeAll(async () => {
         .setFirefoxOptions(options)
         .build();
 
-    await browser.get(url);
+    await browser.get(urlInput);
 });
 
 afterAll(() => {
     browser.quit();
 });
 
-describe('Check Proper Plugin Creation', () => {
+// tests for Pixel.js with input layers
+describe('Pixel With Input: Check Proper Plugin Creation', () => {
     test('page title matches', async () => {
         let title = await browser.getTitle();
         expect(title).toBe('Pixel.js');
@@ -45,14 +47,14 @@ describe('Check Proper Plugin Creation', () => {
         let tutorialDiv = await browser.findElement(By.id('tutorial-div'));
         expect(await tutorialDiv.isDisplayed()).toBeTruthy();
 
-        // close tutorial and scroll down
+        // close tutorial 
         await browser.sleep(500);
         let tutorialFooter = await browser.findElement(By.id('modal-footer'));
         await actions.click(tutorialFooter).perform();
     });
 });
 
-describe('Check Functionality', () => {
+describe('Pixel With Input: Check Functionality', () => {
     test('brush tool creates size-slider', async () => {
         // expect to be hidden at first
         let brushSlider = await browser.findElement(By.id('brush-size'));
@@ -100,7 +102,7 @@ describe('Check Functionality', () => {
         const actions = browser.actions();
         // select rectangle tool and draw one
         await actions.keyDown(82).keyUp(82).perform();
-        await actions.dragAndDrop(canvas, {x: 200, y: 200}).perform();
+        await actions.dragAndDrop(canvas, {x: 300, y: 300}).perform();
 
         await actions.click(submitButton).perform();
         // progress bar should be visible
@@ -108,7 +110,7 @@ describe('Check Functionality', () => {
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
     test('cancel progress bar works', async () => {
-        await browser.sleep(1000);
+        await browser.sleep(1500);
 
         let cancelButton = await browser.findElement(By.id('cancel-export-div'));
         const actions = browser.actions();
@@ -126,6 +128,63 @@ describe('Check Functionality', () => {
         await actions.click(layer1Toggle).perform();
 
         expect(await layer1Toggle.getAttribute('class')).toBe('layer-deactivated');
+    });
+});
+
+// switch to Pixel.js with no input layers
+describe('Pixel Without Input', () => {
+    test('new URL get works properly', async () => {
+        await browser.get(urlNoInput);
+        let title = await browser.getTitle();
+        expect(title).toBe('Pixel.js');
+    });
+
+    test('activating plugin creates prompt for layer creation', async () => {
+        // activate plugin
+        let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
+        const actions = browser.actions();
+        await actions.click(pluginIcon).perform();
+
+        // handle alert, create 3 layers by default
+        let alert = await browser.switchTo().alert();
+        expect(await alert.getText()).toContain("How many layers will you classify?");
+        await alert.accept();
+
+        // close tutorial
+        await browser.sleep(500);
+        let tutorialFooter = await browser.findElement(By.id('modal-footer'));
+        await actions.click(tutorialFooter).perform();
+    });
+
+    test('3 layers created properly', async () => {
+        let layer3 = await browser.findElement(By.id('layer-3-selector'));
+        expect(await layer3.isDisplayed()).toBeTruthy();
+    });
+
+    test('tooltip works on hover', async () => {
+        let tooltip = await browser.findElement(By.className('tooltip'));
+        let tooltipText = await browser.findElement(By.className('tooltiptext'));
+
+        // should be hidden before hover
+        expect(await tooltipText.isDisplayed()).toBeFalsy();
+
+        // hover and should be visible
+        const actions = browser.actions();
+        await actions.click(tooltip).perform();
+        await browser.sleep(1000); // time for opacity transition
+        expect(await tooltipText.isDisplayed()).toBeTruthy();
+    });
+
+    test('reactivating plugin should have no prompt', async () => {
+        // reactivate plugin
+        let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
+        const actions = browser.actions();
+        await actions.click(pluginIcon).perform();
+        await actions.click(pluginIcon).perform();
+
+        // should go straight to tutorial
+        let tutorialDiv = await browser.findElement(By.id('tutorial-div'));
+        expect(await tutorialDiv.isDisplayed()).toBeTruthy();
     });
 });
 

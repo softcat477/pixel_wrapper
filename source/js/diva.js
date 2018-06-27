@@ -30,7 +30,7 @@ import HashParams from "./utils/hash-params";
  *
  *
  **/
-export class Diva
+class Diva
 {
     constructor (element, options)
     {
