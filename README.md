@@ -58,7 +58,7 @@ Here are some user-level instructions on adding a pixel.js job in RODAN.
 - Choose png or tiff resource -> add -> input square should be green now
 - Workflow header tab -> run
 
-### Port Setup
+### Port setup
 - You must create however many layers that you wish to classify as the input ports.
   - Do this by right clicking on the Pixel job, clicking on ports, and adding/deleting input ports as needed.
   - For example, if you're working with 3 layers (music symbols, text, and staff lines), then create three input ports.
@@ -85,7 +85,7 @@ Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.gi
 - Before running, you must set the proper URLs for the Selenium `WebDriver` to fetch. To do this, you'll need to create two Pixel jobs in Rodan. 
   - The first `Pixel.js` job (go to `Run Jobs` and open `Pixel_js`) should have one input layer (so two input ports total including the image). The number of output layers _for the unit tests_ don't matter. Get the URL of the new window, and update the `url` variable in `pixel-wrapper.test.js`:
     ```javascript
-    const url = "the first Pixel.js job's url"; // line 6
+    const urlInput = "the first Pixel.js job's url"; // line 6
     ```
   - The second `Pixel.js` job should have no input layers. Get the URL of this window, and update the `urlNoInput` variable like so:
     ```javascript
@@ -93,4 +93,17 @@ Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.gi
     ```
   - Make sure to keep these jobs running in Rodan anytime you wish to run any tests.
 - Run `npm test` to run the tests.
-> *Note*: This will not pass the Travis CI build, since the `Pixel.js` jobs will be served at `localhost` which Travis cannot reach. However, local testing will work properly. 
+> *Note*: This will not pass the Travis CI build without special configuration changes, since the `Pixel.js` jobs will be served at `localhost` which Travis cannot reach. However, local testing will work properly. 
+
+## Differences from the standalone Pixel 
+This wrapper changes some of the functionality inherited from the standalone [`Pixel.js`](https://github.com/DDMAL/Pixel.js), as well as introducing some new ones.
+- **Creating and deleting layers**
+  - This functionality was removed in order remove any possible user-generated conflicts with the number of output ports and the number of actual layers. 
+  - The number of layers will be determined by the number of input ports created for the `Pixel.js` job; if none, then the user will be prompted and must accurately determine the number of layers to classify.
+- **Select region layer**
+  - This is the default layer selected when opening a `Pixel.js` job. The user should use this layer to select the regions of the page that they will classify, and should stick to within these regions. 
+- **Export buttons**
+  - The **[Submit To Rodan]** button allows the user to submit the classified layers to the Rodan workflow.
+  - The **[Export as CSV]** and **[Export as image Data PNG]** buttons, while functional, will cause the exported layers to have streaks of empty image data due to the filetype change required for compatibility with the Convolutional Method. These buttons in general shouldn't be used, as they are not required within any workflow.
+- **Background layer**  
+  - This layer is automatically generated when using the **[Submit To Rodan]** button. It will be generated as the negative (or difference) of the other layers within the selection regions.
