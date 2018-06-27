@@ -13,7 +13,7 @@ beforeAll(async () => {
     // Set up the webdriver
     let options = new firefox.Options()
         .headless()
-        .windowSize({height: 1920, width: 1200}); // line currently doesn't work for some reason
+        .addArguments('--width=1920','--height=1200');
     browser = await new Builder()
         .forBrowser('firefox')
         .setFirefoxOptions(options)
@@ -68,20 +68,60 @@ describe('Check Functionality', () => {
         // expect to now be visible
         isVisible = await brushSlider.isDisplayed();
         expect(isVisible).toBeTruthy();
-    })
+    });
     
     test('export as png works', async () => {
         // check for button
         let exportPNGButton = await browser.findElement(By.id('png-export-button'));
         expect(await exportPNGButton.isDisplayed()).toBeTruthy();
 
-        // CURRENTLY BUTTON IS OUT OF VIEWPORT, SO IT CANNOT BE CLICKED ON (VIEWPORT SIZE SPECIFICATION DOESN'T WORK)
-        // // click on button
-        // const actions = browser.actions();
-        // await actions.click(exportPNGButton).perform();
+        // click on button
+        const actions = browser.actions();
+        await actions.click(exportPNGButton).perform();
 
-        // // links should now be visible
-        // let links = await browser.findElement(By.id('png-links-div'));
-        // expect(links).toBeDefined();
-    })
-})
+        // links should now be visible
+        let links = await browser.findElement(By.id('png-links-div'));
+        expect(links).toBeDefined();
+    });
+
+    // next three tests are linked and use the submitButton variable
+    var submitButton;
+    test('submit to rodan without selection regions creates alert', async() => {
+        // click on button
+        submitButton = await browser.findElement(By.id('rodan-export-button'));
+        const actions = browser.actions();
+        await actions.click(submitButton).perform();
+
+        // check for alert
+        let alert = await browser.switchTo().alert();
+        expect(await alert.getText()).toBe("You haven't created any select regions!");
+        await alert.accept();
+    });
+    test('drawing select region then submit to rodan creates progress bar', async() => {
+        let canvas = await browser.findElement(By.id('layer--1-canvas'));
+        const actions = browser.actions();
+        // select rectangle tool and draw one
+        await actions.keyDown(82).keyUp(82).perform();
+        await actions.dragAndDrop(canvas, {x: 200, y: 200}).perform();
+
+        await actions.click(submitButton).perform();
+        // progress bar should be visible
+        let progressBar = await browser.findElement(By.id('pbar-inner-div'));
+        expect(await progressBar.isDisplayed()).toBeTruthy();
+    });
+    test('cancel progress bar works', async() => {
+        let cancelButton = await browser.findElement(By.id('cancel-export-div'));
+        const actions = browser.actions();
+        await actions.click(cancelButton).perform();
+
+        expect(await browser.findElements(By.id('pixel-export-div'))).toEqual([]); // empty list since not found
+    });
+});
+
+
+
+
+
+
+
+
