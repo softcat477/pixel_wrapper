@@ -2747,7 +2747,6 @@
 	    var EventListener = 'EventListener';
 	    var addEventListener = 'add' + EventListener;
 	    var removeEventListener = 'remove' + EventListener;
-	    var newScrollX, newScrollY;
 	
 	    var dragged = [];
 	
@@ -4018,7 +4017,7 @@
 	            if (this.settings.verticallyOriented || this.settings.inGrid) direction = newScrollTop - previousTopScroll;else direction = newScrollLeft - previousLeftScroll;
 	
 	            //give adjust the direction we care about
-	            this.viewerState.renderer.adjust(direction);
+	            this.viewerState.renderer.adjust();
 	
 	            var primaryScroll = this.settings.verticallyOriented || this.settings.inGrid ? newScrollTop : newScrollLeft;
 	
@@ -7671,7 +7670,7 @@
 	        }
 	    }, {
 	        key: 'adjust',
-	        value: function adjust(direction) {
+	        value: function adjust() {
 	            this._clearAnimation();
 	
 	            this._render();
@@ -9636,7 +9635,6 @@
 	    }
 	};
 	
-	/* jshint ignore:start */
 	
 	var now = void 0;
 	
@@ -9649,7 +9647,6 @@
 	        return Date.now();
 	    };
 	}
-	/* jshint ignore:end */
 	
 	function animate(options) {
 	    var durationMs = options.duration;
@@ -9728,12 +9725,6 @@
 	function linearEasing(e) {
 	    return e;
 	}
-	
-	/* jshint ignore:start */
-	function inOutQuadEasing(e) {
-	    return e < .5 ? 2 * e * e : -1 + (4 - 2 * e) * e;
-	}
-	/* jshint ignore:end */
 	
 	function inOutCubicEasing(t) {
 	    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
@@ -10658,7 +10649,7 @@
 	    return imageDimension / Math.pow(2, zoomDifference);
 	};
 	
-	var getOtherImageData = function getOtherImageData(otherImages, lowestMaxZoom, canvasWidth, canvasHeight) {
+	var getOtherImageData = function getOtherImageData(otherImages, lowestMaxZoom) {
 	    return otherImages.map(function (itm) {
 	        var w = itm.width;
 	        var h = itm.height;
@@ -10768,7 +10759,7 @@
 	        maxZoom = getMaxZoomLevel(width, height);
 	
 	        if (thisResource.item) {
-	            otherImages = getOtherImageData(thisResource.item, lowestMaxZoom, width, height);
+	            otherImages = getOtherImageData(thisResource.item, lowestMaxZoom);
 	        } else {
 	            otherImages = [];
 	        }

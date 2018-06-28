@@ -58,7 +58,7 @@ Here are some user-level instructions on adding a pixel.js job in RODAN.
 - Choose png or tiff resource -> add -> input square should be green now
 - Workflow header tab -> run
 
-### Setting Up the Ports
+### Port setup
 - You must create however many layers that you wish to classify as the input ports.
   - Do this by right clicking on the Pixel job, clicking on ports, and adding/deleting input ports as needed.
   - For example, if you're working with 3 layers (music symbols, text, and staff lines), then create three input ports.
@@ -74,5 +74,26 @@ If this is the case, make sure to run ```gulp develop:rodan``` from the ```pixel
 
 If you make any changes to the css files, you'll need to move them manually the ```pixel_wrapper/static/css``` folder.
 
-### Note
-The current implementation dissociates the wrapper from Diva.js. 
+## Testing
+Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.github.io/selenium/docs/api/javascript/index.html), and requires a web browser ([FireFox](https://www.mozilla.org/en-US/firefox/), make sure you have the latest version if already installed), and its driver ([`geckodriver`](https://github.com/mozilla/geckodriver/releases/)). 
+
+- Once you install `geckodriver`, place it in your system [PATH](https://en.wikipedia.org/wiki/PATH_%28variable%29), perhaps like so
+  ``` bash
+  mv ~/Downloads/geckodriver /usr/local/bin
+  ```
+- You can access the `pixel-wrapper.test.js` file in `source/js/plugins` in order to add/remove/alter existing tests. 
+- Once ready to run the tests, start the server with `gulp`. It must be running for the unit tests to work. You should either run it as a background process (`gulp &`), or in another terminal. 
+- Run `npm test`.
+
+## Differences from the standalone Pixel 
+This wrapper changes some of the functionality inherited from the standalone [`Pixel.js`](https://github.com/DDMAL/Pixel.js), as well as introducing some new ones.
+- **Creating and deleting layers**
+  - This functionality was removed in order remove any possible user-generated conflicts with the number of output ports and the number of actual layers. 
+  - The number of layers will be determined by the number of input ports created for the `Pixel.js` job; if none, then the user will be prompted and must accurately determine the number of layers to classify.
+- **Select region layer**
+  - This is the default layer selected when opening a `Pixel.js` job. The user should use this layer to select the regions of the page that they will classify, and should stick to within these regions. 
+- **Export buttons**
+  - The **[Submit To Rodan]** button allows the user to submit the classified layers to the Rodan workflow.
+  - The **[Export as CSV]** and **[Export as image Data PNG]** buttons, while functional, will cause the exported layers to have streaks of empty image data due to the filetype change required for compatibility with the Convolutional Method. These buttons in general shouldn't be used, as they are not required within any workflow.
+- **Background layer**  
+  - This layer is automatically generated when using the **[Submit To Rodan]** button. It will be generated as the negative (or difference) of the other layers within the selection regions.

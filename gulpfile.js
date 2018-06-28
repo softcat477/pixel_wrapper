@@ -47,19 +47,19 @@ function lintGulpfile ()
 
 function plugins (done)
 {
-    let pluginConfig = Object.create(webpackConf).slice(1);
+    var pluginConfig = Object.create(webpackConf).slice(1);
     webpack(pluginConfig).run(done);
 }
 
 function diva (done)
 {
-	let divaConfig = Object.create(webpackConf)[0];
+	var divaConfig = Object.create(webpackConf)[0];
     webpack(divaConfig).run(done);
 }
 
 function server ()
 {
-    let devConfig = Object.create(webpackConf)[0];
+    var devConfig = Object.create(webpackConf)[0];
     devConfig.entry.unshift("webpack-dev-server/client?http://localhost:9001/");
     devConfig.devtool = "source-map";
     devConfig.debug = true;
