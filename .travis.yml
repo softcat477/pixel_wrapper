@@ -15,6 +15,7 @@ install:
 
 script:
   - gulp develop:lint
+  - gulp develop:server &
   - npm test
 
 notifications:

@@ -27,7 +27,7 @@ A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [
       # Paths to other jobs
     )
     ```
-  - Increase `RODAN_RUNJOB_WORKING_USER_EXPIRY_SECONDS` (line 87) from `15` to `15000000`.
+  - Increase `RODAN_RUNJOB_WORKING_USER_EXPIRY_SECONDS` (line 87) from `15` to `150000`.
 - In `RODAN_JOB_PACKAGES`, check if `rodan.jobs.pil-rodan` is included in the job paths.
   - If `pil-rodan` is not in the list, clone https://github.com/DDMAL/pil-rodan.git to the jobs folder, like in the first step and add its path to the list of rodan job packages like so:
     ``` python
@@ -82,18 +82,8 @@ Unit testing for **Pixel Wrapper** is done using [Selenium](http://seleniumhq.gi
   mv ~/Downloads/geckodriver /usr/local/bin
   ```
 - You can access the `pixel-wrapper.test.js` file in `source/js/plugins` in order to add/remove/alter existing tests. 
-- Before running, you must set the proper URLs for the Selenium `WebDriver` to fetch. To do this, you'll need to create two Pixel jobs in Rodan. 
-  - The first `Pixel.js` job (go to `Run Jobs` and open `Pixel_js`) should have one input layer (so two input ports total including the image). The number of output layers _for the unit tests_ don't matter. Get the URL of the new window, and update the `url` variable in `pixel-wrapper.test.js`:
-    ```javascript
-    const urlInput = "the first Pixel.js job's url"; // line 6
-    ```
-  - The second `Pixel.js` job should have no input layers. Get the URL of this window, and update the `urlNoInput` variable like so:
-    ```javascript
-    const urlNoInput = "the second Pixel.js job's url"; // line 7
-    ```
-  - Make sure to keep these jobs running in Rodan anytime you wish to run any tests.
-- Run `npm test` to run the tests.
-> *Note*: This will not pass the Travis CI build without special configuration changes, since the `Pixel.js` jobs will be served at `localhost` which Travis cannot reach. However, local testing will work properly. 
+- Once ready to run the tests, start the server with `gulp`. It must be running for the unit tests to work. You should either run it as a background process (`gulp &`), or in another terminal. 
+- Run `npm test`.
 
 ## Differences from the standalone Pixel 
 This wrapper changes some of the functionality inherited from the standalone [`Pixel.js`](https://github.com/DDMAL/Pixel.js), as well as introducing some new ones.

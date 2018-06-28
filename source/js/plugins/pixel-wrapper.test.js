@@ -3,8 +3,7 @@
 const {Builder, By, Key, until} = require('selenium-webdriver');
 const firefox = require('selenium-webdriver/firefox');
 // this is a Pixel.js job in Rodan
-const urlInput = process.env.PIXEL_URL_INPUT;
-const urlNoInput = process.env.PIXEL_URL_NO_INPUT;
+const url = 'http://localhost:9001/index_test.html';
 
 jest.setTimeout('45000');
 
@@ -20,15 +19,14 @@ beforeAll(async () => {
         .setFirefoxOptions(options)
         .build();
 
-    await browser.get(urlInput);
+    await browser.get(url);
 });
 
 afterAll(() => {
     browser.quit();
 });
 
-// tests for Pixel.js with input layers
-describe('Pixel With Input: Check Proper Plugin Creation', () => {
+describe('Checking Proper Plugin Creation', () => {
     test('page title matches (Pixel.js was loaded properly)', async () => {
         let title = await browser.getTitle();
         expect(title).toBe('Pixel.js');
@@ -36,10 +34,24 @@ describe('Pixel With Input: Check Proper Plugin Creation', () => {
 
     var pluginIcon;
     test('plugin icon exists on the page', async () => {
-        pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
+        pluginIcon = await browser.wait(until.elementLocated(By.id('diva-1-pixel-icon-glyph')), 5000);
         expect(pluginIcon).toBeDefined();
     });
-    test('icon clicked creates the tutorial', async () => {
+
+    test('activating plugin creates prompt for number of layers, input 2', async () => {
+        // activate plugin
+        const actions = browser.actions();
+        await actions.click(pluginIcon).perform();
+
+        // handle alert
+        let alert = await browser.switchTo().alert();
+        expect(await alert.getText()).toContain("How many layers will you classify?");
+        // create 1 layer
+        await alert.sendKeys('2');
+        await alert.accept();
+    });
+
+    test('tutorial is created after the prompt is closed', async () => {
         // activate plugin
         const actions = browser.actions();
         await actions.click(pluginIcon).perform();
@@ -52,9 +64,14 @@ describe('Pixel With Input: Check Proper Plugin Creation', () => {
         let tutorialFooter = await browser.findElement(By.id('modal-footer'));
         await actions.click(tutorialFooter).perform();
     });
+
+    test('the 2 layers were created properly (layer 2 selector is visible)', async () => {
+        let layer2 = await browser.findElement(By.id('layer-2-selector'));
+        expect(await layer2.isDisplayed()).toBeTruthy();
+    });
 });
 
-describe('Pixel With Input: Check Functionality', () => {
+describe('Checking Functionality', () => {
     test('selecting the brush tool creates brush-size slider', async () => {
         // expect to be hidden at first
         let brushSlider = await browser.findElement(By.id('brush-size'));
@@ -69,7 +86,21 @@ describe('Pixel With Input: Check Functionality', () => {
         isVisible = await brushSlider.isDisplayed();
         expect(isVisible).toBeTruthy();
     });
-    
+
+    test('tooltip creates tooltip-text on mouse hover', async () => {
+        let tooltip = await browser.findElement(By.className('tooltip'));
+        let tooltipText = await browser.findElement(By.className('tooltiptext'));
+
+        // should be hidden before hover
+        expect(await tooltipText.isDisplayed()).toBeFalsy();
+
+        // hover and should be visible
+        const actions = browser.actions();
+        await actions.click(tooltip).perform();
+        await browser.sleep(1000); // time for opacity transition
+        expect(await tooltipText.isDisplayed()).toBeTruthy();
+    });
+
     test('clicking export as png button creates download links', async () => {
         // check for button
         let exportPNGButton = await browser.findElement(By.id('png-export-button'));
@@ -84,7 +115,7 @@ describe('Pixel With Input: Check Functionality', () => {
         expect(await links.isEnabled()).toBeTruthy();
     });
 
-    // next three tests are linked and use the submitButton variable
+    // next three tests are linked and use the submitButton variable    
     var submitButton;
     test('submit to rodan without selection regions creates alert', async () => {
         // click on button
@@ -110,8 +141,6 @@ describe('Pixel With Input: Check Functionality', () => {
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
     test('cancel progress bar button removes the progress div', async () => {
-        await browser.sleep(1500);
-
         let cancelButton = await browser.findElement(By.id('cancel-export-div'));
         const actions = browser.actions();
         await actions.click(cancelButton).perform();
@@ -130,68 +159,3 @@ describe('Pixel With Input: Check Functionality', () => {
         expect(await layer1Toggle.getAttribute('class')).toBe('layer-deactivated');
     });
 });
-
-// switch to Pixel.js with no input layers
-describe('Pixel Without Input', () => {
-    test('new URL get successfully loads other Pixel.js app', async () => {
-        await browser.get(urlNoInput);
-        let title = await browser.getTitle();
-        expect(title).toBe('Pixel.js');
-    });
-
-    test('activating plugin creates prompt for number of layers', async () => {
-        // activate plugin
-        let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
-        const actions = browser.actions();
-        await actions.click(pluginIcon).perform();
-
-        // handle alert, create 3 layers by default
-        let alert = await browser.switchTo().alert();
-        expect(await alert.getText()).toContain("How many layers will you classify?");
-        await alert.accept();
-
-        // close tutorial
-        await browser.sleep(500);
-        let tutorialFooter = await browser.findElement(By.id('modal-footer'));
-        await actions.click(tutorialFooter).perform();
-    });
-
-    test('default 3 layers were created properly (layer 3 selector is visible)', async () => {
-        let layer3 = await browser.findElement(By.id('layer-3-selector'));
-        expect(await layer3.isDisplayed()).toBeTruthy();
-    });
-
-    test('tooltip creates tooltip-text on mouse hover', async () => {
-        let tooltip = await browser.findElement(By.className('tooltip'));
-        let tooltipText = await browser.findElement(By.className('tooltiptext'));
-
-        // should be hidden before hover
-        expect(await tooltipText.isDisplayed()).toBeFalsy();
-
-        // hover and should be visible
-        const actions = browser.actions();
-        await actions.click(tooltip).perform();
-        await browser.sleep(1000); // time for opacity transition
-        expect(await tooltipText.isDisplayed()).toBeTruthy();
-    });
-
-    test('deactivating and reactivating plugin no longer creates number of layers prompt', async () => {
-        // reactivate plugin
-        let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
-        const actions = browser.actions();
-        await actions.click(pluginIcon).perform();
-        await actions.click(pluginIcon).perform();
-
-        // should go straight to tutorial
-        let tutorialDiv = await browser.findElement(By.id('tutorial-div'));
-        expect(await tutorialDiv.isDisplayed()).toBeTruthy();
-    });
-});
-
-
-
-
-
-
-
-
