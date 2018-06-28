@@ -476,10 +476,6 @@
 	    } else {
 	            // add new filter to the queue
 	        }
-
-	    var fkeys = Object.keys(_filterQueue);
-
-	    fkeys.map(function () {});
 	}
 
 	/**

@@ -13,14 +13,6 @@ export function addFilterToQueue (filter)
     {
         // add new filter to the queue
     }
-
-    let fkeys = Object.keys(_filterQueue);
-
-    fkeys.map( () => {
-
-    });
-
-
 }
 
 /**
