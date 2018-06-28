@@ -587,7 +587,6 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.Diva = undefined;
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 	
@@ -642,7 +641,7 @@
 	 *
 	 *
 	 **/
-	var Diva = exports.Diva = function () {
+	var Diva = function () {
 	    function Diva(element, options) {
 	        _classCallCheck(this, Diva);
 	
@@ -9636,7 +9635,6 @@
 	    }
 	};
 	
-	/* jshint ignore:start */
 	
 	var now = void 0;
 	
@@ -9649,7 +9647,6 @@
 	        return Date.now();
 	    };
 	}
-	/* jshint ignore:end */
 	
 	function animate(options) {
 	    var durationMs = options.duration;
@@ -9659,7 +9656,7 @@
 	
 	    // Setup
 	    // Times are in milliseconds from a basically arbitrary start
-	    var start = now(); // jshint ignore:line
+	    var start = now();
 	    var end = start + durationMs;
 	
 	    var tweenFns = {};
@@ -9686,7 +9683,7 @@
 	    };
 	
 	    function update() {
-	        var current = now(); // jshint ignore:line
+	        var current = now();
 	        var elapsed = Math.min((current - start) / durationMs, 1);
 	
 	        updateValues(elapsed);
@@ -9728,12 +9725,6 @@
 	function linearEasing(e) {
 	    return e;
 	}
-	
-	/* jshint ignore:start */
-	function inOutQuadEasing(e) {
-	    return e < .5 ? 2 * e * e : -1 + (4 - 2 * e) * e;
-	}
-	/* jshint ignore:end */
 	
 	function inOutCubicEasing(t) {
 	    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;

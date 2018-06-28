@@ -8,18 +8,16 @@ export default {
     }
 };
 
-/* jshint ignore:start */
 let now;
 
 if (typeof performance !== 'undefined' && performance.now)
 {
-    now = () => { return performance.now() };
+    now = () => { return performance.now(); };
 }
 else
 {
-    now = () => { return Date.now() };
+    now = () => { return Date.now(); };
 }
-/* jshint ignore:end */
 
 
 function animate (options)
@@ -31,7 +29,7 @@ function animate (options)
 
     // Setup
     // Times are in milliseconds from a basically arbitrary start
-    const start = now(); // jshint ignore:line
+    const start = now(); 
     const end = start + durationMs;
 
     const tweenFns = {};
@@ -61,7 +59,7 @@ function animate (options)
 
     function update()
     {
-        const current = now(); // jshint ignore:line
+        const current = now(); 
         const elapsed = Math.min((current - start) / durationMs, 1);
 
         updateValues(elapsed);
@@ -109,14 +107,6 @@ function linearEasing(e)
 {
     return e;
 }
-
-/* jshint ignore:start */
-function inOutQuadEasing (e)
-{
-    return e < .5 ? 2 * e * e : -1+(4-2 * e) * e
-}
-/* jshint ignore:end */
-
 
 function inOutCubicEasing (t)
 {

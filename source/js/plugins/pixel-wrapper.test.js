@@ -29,17 +29,17 @@ afterAll(() => {
 
 // tests for Pixel.js with input layers
 describe('Pixel With Input: Check Proper Plugin Creation', () => {
-    test('page title matches', async () => {
+    test('page title matches (Pixel.js was loaded properly)', async () => {
         let title = await browser.getTitle();
         expect(title).toBe('Pixel.js');
     });
 
     var pluginIcon;
-    test('plugin icon exists', async () => {
+    test('plugin icon exists on the page', async () => {
         pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
         expect(pluginIcon).toBeDefined();
     });
-    test('icon clicked creates tutorial', async () => {
+    test('icon clicked creates the tutorial', async () => {
         // activate plugin
         const actions = browser.actions();
         await actions.click(pluginIcon).perform();
@@ -55,7 +55,7 @@ describe('Pixel With Input: Check Proper Plugin Creation', () => {
 });
 
 describe('Pixel With Input: Check Functionality', () => {
-    test('brush tool creates size-slider', async () => {
+    test('selecting the brush tool creates brush-size slider', async () => {
         // expect to be hidden at first
         let brushSlider = await browser.findElement(By.id('brush-size'));
         let isVisible = await brushSlider.isDisplayed();
@@ -70,7 +70,7 @@ describe('Pixel With Input: Check Functionality', () => {
         expect(isVisible).toBeTruthy();
     });
     
-    test('export as png works', async () => {
+    test('clicking export as png button creates download links', async () => {
         // check for button
         let exportPNGButton = await browser.findElement(By.id('png-export-button'));
         expect(await exportPNGButton.isDisplayed()).toBeTruthy();
@@ -109,7 +109,7 @@ describe('Pixel With Input: Check Functionality', () => {
         let progressBar = await browser.findElement(By.id('pbar-inner-div'));
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
-    test('cancel progress bar works', async () => {
+    test('cancel progress bar button removes the progress div', async () => {
         await browser.sleep(1500);
 
         let cancelButton = await browser.findElement(By.id('cancel-export-div'));
@@ -120,7 +120,7 @@ describe('Pixel With Input: Check Functionality', () => {
         expect(await browser.findElements(By.id('pixel-export-div'))).toEqual([]); // empty list since not found
     });
 
-    test('layer 1 activation toggle works properly', async () => {
+    test('layer 1 activation toggle changes its class to deactivated', async () => {
         let layer1Toggle = await browser.findElement(By.id('layer-1-activation'));
         expect(await layer1Toggle.getAttribute('class')).toBe('layer-activated');
 
@@ -133,13 +133,13 @@ describe('Pixel With Input: Check Functionality', () => {
 
 // switch to Pixel.js with no input layers
 describe('Pixel Without Input', () => {
-    test('new URL get works properly', async () => {
+    test('new URL get successfully loads other Pixel.js app', async () => {
         await browser.get(urlNoInput);
         let title = await browser.getTitle();
         expect(title).toBe('Pixel.js');
     });
 
-    test('activating plugin creates prompt for layer creation', async () => {
+    test('activating plugin creates prompt for number of layers', async () => {
         // activate plugin
         let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
         const actions = browser.actions();
@@ -156,12 +156,12 @@ describe('Pixel Without Input', () => {
         await actions.click(tutorialFooter).perform();
     });
 
-    test('3 layers created properly', async () => {
+    test('default 3 layers were created properly (layer 3 selector is visible)', async () => {
         let layer3 = await browser.findElement(By.id('layer-3-selector'));
         expect(await layer3.isDisplayed()).toBeTruthy();
     });
 
-    test('tooltip works on hover', async () => {
+    test('tooltip creates tooltip-text on mouse hover', async () => {
         let tooltip = await browser.findElement(By.className('tooltip'));
         let tooltipText = await browser.findElement(By.className('tooltiptext'));
 
@@ -175,7 +175,7 @@ describe('Pixel Without Input', () => {
         expect(await tooltipText.isDisplayed()).toBeTruthy();
     });
 
-    test('reactivating plugin should have no prompt', async () => {
+    test('deactivating and reactivating plugin no longer creates number of layers prompt', async () => {
         // reactivate plugin
         let pluginIcon = await browser.findElement(By.id('diva-1-pixel-icon-glyph'));
         const actions = browser.actions();
