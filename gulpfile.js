@@ -62,7 +62,6 @@ function server ()
     var devConfig = Object.create(webpackConf)[0];
     devConfig.entry.unshift("webpack-dev-server/client?http://localhost:9001/");
     devConfig.devtool = "source-map";
-    devConfig.debug = true;
     devConfig.devServer = {
         inline: true
     };
@@ -77,7 +76,7 @@ function server ()
     {
         if (err)
             throw new gutil.PluginError('dev-server', err);
-        gutil.log('dev-server', "http://localhost:9001/index.html");
+        gutil.log('dev-server', "http://localhost:9001/index_test.html");
     });
 }
 

@@ -4,7 +4,8 @@
   "description": "Diva.js",
   "main": "build/js/diva.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "start": "gulp"
   },
   "repository": {
     "type": "git",
@@ -32,7 +33,7 @@
   "devDependencies": {
     "babel-core": "^6.26.3",
     "babel-jest": "^23.2.0",
-    "babel-loader": "^6.2.10",
+    "babel-loader": "^7.1.4",
     "babel-preset-es2015": "^6.18.0",
     "babel-register": "^6.26.0",
     "chai": "^3.5.0",
@@ -53,8 +54,8 @@
     "phantomjs-prebuilt": "^2.1.16",
     "sinon": "^1.17.7",
     "sinon-chai": "^2.14.0",
-    "webpack": "^1.15.0",
-    "webpack-dev-server": "^1.16.2"
+    "webpack": "^4.14.0",
+    "webpack-dev-server": "^3.1.4"
   },
   "divaOptions": {
     "mainEntry": "diva.js",
