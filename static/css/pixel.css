@@ -497,7 +497,7 @@ button {
 /* Tooltip text */
 .tooltiptext {
     visibility: hidden;
-    width: 400px;
+    width: 240px;
     background-color: #414141;
     color: white;
     text-align: center;

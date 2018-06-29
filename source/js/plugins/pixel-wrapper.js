@@ -38,15 +38,17 @@ export class PixelWrapper
         let helpDiv = document.createElement("div"),
             helpText = document.createTextNode("?"),
             tooltipDiv = document.createElement("div"),
-            tooltipText = document.createTextNode("While in the Select Region Layer, use the " +
-            "rectangle tool to select the regions of the page that you will classify. " +
-            "Once you select these regions, select another layer and begin classifying! " + 
-            "Make sure to stay within the bounds of the region.");
+            // string instead of textNode so newlines can be used
+            tooltipText = "While in the Select Region Layer, use the " +
+            "rectangle tool to select the regions of the page that you will classify.<br>" +
+            "Draw the rectangles from top left to bottom right. <br><br>" +
+            "Once you select these regions, select another layer and begin classifying!<br>" + 
+            "Keep in mind that classification outside these regions will not be utilized.";
 
         helpDiv.setAttribute("class", "tooltip");
         helpDiv.appendChild(helpText);
         tooltipDiv.setAttribute("class", "tooltiptext");
-        tooltipDiv.appendChild(tooltipText);
+        tooltipDiv.innerHTML = tooltipText;
 
         helpDiv.appendChild(tooltipDiv);
         selectRegionLayerBox.appendChild(helpDiv);
