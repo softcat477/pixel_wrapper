@@ -62,7 +62,6 @@ function server ()
     var devConfig = Object.create(webpackConf)[0];
     devConfig.entry.unshift("webpack-dev-server/client?http://localhost:9001/");
     devConfig.devtool = "source-map";
-    devConfig.debug = true;
     devConfig.devServer = {
         inline: true
     };
@@ -77,7 +76,7 @@ function server ()
     {
         if (err)
             throw new gutil.PluginError('dev-server', err);
-        gutil.log('dev-server', "http://localhost:9001/index.html");
+        gutil.log('dev-server', "http://localhost:9001/index_test.html");
     });
 }
 
@@ -86,13 +85,12 @@ gulp.task('lint-src', lintSrc);
 gulp.task('lint-test', lintTest);
 gulp.task('lint-gulpfile', lintGulpfile);
 
-gulp.task('develop:build-icons', ['convert-svg-to-png', 'make-sprites']);
 gulp.task('develop:build-plugins', plugins);
 gulp.task('develop:build-diva', diva);
 gulp.task('develop:clean', cleanDist);
 gulp.task('develop:tmp-clean', cleanTemp);
-gulp.task('develop:lint', ['lint-src', 'lint-test', 'lint-gulpfile']);
+gulp.task('develop:lint', gulp.series('lint-src', 'lint-test', 'lint-gulpfile'));
 gulp.task('develop:server', server);
-gulp.task('develop', ['develop:lint', 'develop:clean', 'develop:build-plugins', 'develop:server']);
-gulp.task('develop:rodan', ['develop:lint', 'develop:clean', 'develop:build-plugins', 'develop:build-diva']);
-gulp.task('default', ['develop']);
+gulp.task('develop', gulp.series('develop:lint', 'develop:clean', 'develop:build-plugins', 'develop:server'));
+gulp.task('develop:rodan', gulp.series('develop:lint', 'develop:clean', 'develop:build-plugins', 'develop:build-diva'));
+gulp.task('default', gulp.series('develop'));
