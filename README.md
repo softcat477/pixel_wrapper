@@ -37,8 +37,8 @@ A wrapper to run [```Pixel.js```](https://github.com/DDMAL/Pixel.js) on top of [
       # Paths to other jobs
     )
     ```
-- Open `docker-compose.job-dev.yml` and replace both occurences of `demojob` with `pixel_wrapper`.
-- In ```source/js/plugins``` run ```python activate_wrapper.py``` in terminal to activate the wrapper within `Pixel.js`.
+- Open `docker-compose.job-dev.yml` and replace both occurrences of `demojob` with `pixel_wrapper`.
+- In ```source/js/plugins``` run ```python activate_wrapper.py``` in terminal to activate the wrapper within `pixel.js`.
 - In ```source/js/plugins/Pixel.js``` run ```./pixel.sh``` in terminal to install all dependencies and compile the project.
 - The wrapper should now be available to use in any workflow
 
