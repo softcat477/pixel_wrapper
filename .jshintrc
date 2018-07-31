@@ -15,6 +15,7 @@
     "globals": {
         "define": true,
         "expect": true,
-        "$": false
+        "$": false,
+        "numberInputLayers": true
     }
 }

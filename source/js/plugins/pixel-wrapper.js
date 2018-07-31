@@ -89,10 +89,10 @@ export class PixelWrapper
         if (this.layers.length !== 1) 
             return;
 
-        let numLayers = numberInputLayers; // jshint ignore:line
+        let numLayers = numberInputLayers; 
 
         // Ask user how many layers to create if there's no input
-        if (numberInputLayers === 0) // jshint ignore:line
+        if (numberInputLayers === 0) 
         {
             while (numLayers <= 0 || numLayers > 7) 
             {
