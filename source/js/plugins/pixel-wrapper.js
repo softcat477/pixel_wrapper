@@ -15,6 +15,10 @@ export class PixelWrapper
         this.zoomLevel = pixelInstance.core.getSettings().zoomLevel;
         this.exportInterrupted = false;
         this.selectRegionLayer;
+        this.selectedWholePage = false;
+        this.maxZoom = pixelInstance.core.getSettings().maxZoomLevel;
+        this.maxWidth = pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.maxZoom).width;
+        this.maxHeight = pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, this.maxZoom).height;
     }
 
     activate ()
@@ -23,11 +27,34 @@ export class PixelWrapper
         this.createButtons();
         this.rodanImagesToCanvas();
         this.createTooltip();
+        this.addListeners();
     }
 
     deactivate ()
     {
         this.destroyButtons();
+    }
+
+    addListeners ()
+    {
+        // add select all listener for select region layer
+        document.addEventListener('keydown', (e) =>
+        {
+            if (this.pixelInstance.selectedLayerIndex === 0)
+            {
+                if (e.key.toLowerCase() === 'a' && e.shiftKey)
+                    this.selectedWholePage = true;
+                else if (e.keyCode === 27)
+                    this.selectedWholePage = false;
+                else
+                    return;
+
+                let mode = this.selectedWholePage ? 'add' : 'subtract';
+                let rect = new Rectangle(new Point(0, 0, this.pageIndex), this.maxWidth, this.maxHeight, mode);
+                this.selectRegionLayer.addShapeToLayer(rect);
+                this.pixelInstance.redrawLayer(this.selectRegionLayer);
+            }
+        });
     }
 
     createTooltip ()
@@ -39,11 +66,13 @@ export class PixelWrapper
             helpText = document.createTextNode("?"),
             tooltipDiv = document.createElement("div"),
             // string instead of textNode so newlines can be used
-            tooltipText = "While in the Select Region Layer, use the " +
-            "rectangle tool to select the regions of the page that you will classify.<br>" +
-            "Draw the rectangles from top left to bottom right. <br><br>" +
-            "Once you select these regions, select another layer and begin classifying!<br>" + 
-            "Keep in mind that classification outside these regions will not be utilized.";
+            tooltipText = "<p>While in the Select Region Layer, use the " +
+            "rectangle tool to select the regions of the page that you will classify.</p>" +
+            "<p>Once you select these regions, select another layer and begin classifying! " + 
+            "Keep in mind that classification outside these regions will not be utilized.</p>" +
+            "<p>You can select the entire page by pressing <b>SHIFT + A</b>.</p>" +
+            "<p>You can deselect the entire page by pressing <b>ESC</b>. This will destroy all selection regions " +
+            "that you have created.</p>";
 
         helpDiv.setAttribute("class", "tooltip");
         helpDiv.appendChild(helpText);
@@ -185,18 +214,16 @@ export class PixelWrapper
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
         // this backgroundLayer is only created upon submitting (so no conflicts)
         let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer", 
-            this.pixelInstance, 0.5, this.pixelInstance.actions),
-            maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
-            width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
+            this.pixelInstance, 0.5, this.pixelInstance.actions);
 
         // Add select regions to backgroundLayer
-        this.selectRegionLayer.shapes.forEach((shape) => {
+        this.selectRegionLayer.shapes.forEach((shape) => 
+        {
             // Get shape dimensions
-            let x = shape.origin.getCoordsInPage(maxZoom).x,
-                y = shape.origin.getCoordsInPage(maxZoom).y,
-                rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
-                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
+            let x = shape.origin.getCoordsInPage(this.maxZoom).x,
+                y = shape.origin.getCoordsInPage(this.maxZoom).y,
+                rectWidth = shape.relativeRectWidth * Math.pow(2, this.maxZoom),
+                rectHeight = shape.relativeRectHeight * Math.pow(2, this.maxZoom),
                 rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
             if (shape.blendMode === "subtract") { 
@@ -205,22 +232,31 @@ export class PixelWrapper
 
             backgroundLayer.addShapeToLayer(rect);
         });
-        backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
+        backgroundLayer.drawLayer(this.maxZoom, backgroundLayer.getCanvas());
+
+        // Alert and return if user hasn't created a selection region
+        if (this.selectRegionLayer.shapes.length === 0) 
+        {
+            alert("You haven't created any select regions!");
+            this.layers.unshift(this.selectRegionLayer);
+            return;
+        }
 
         // Instantiate progress bar
         this.uiManager.createExportElements(this);
 
-        this.layers.forEach((layer) => {
+        this.layers.forEach((layer) => 
+        {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
             layerCanvas.setAttribute("id", "layer-" + layer.layerId + "-export-canvas");
             layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
-            layerCanvas.width = width;
-            layerCanvas.height = height;
-            layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
+            layerCanvas.width = this.maxWidth;
+            layerCanvas.height = this.maxHeight;
+            layer.drawLayerInPageCoords(this.maxZoom, layerCanvas, this.pageIndex); 
 
-            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
+            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, this.maxWidth, this.maxHeight);
         });
     }
 
@@ -232,27 +268,33 @@ export class PixelWrapper
             col = 0,
             pixelCtx = layerCanvas.getContext('2d');
 
-        let doChunk = () => { 
+        let doChunk = () => 
+        { 
             var cnt = chunkSize;
             chunkNum++;
-            while (cnt--) { 
+            while (cnt--) 
+            { 
                 if (row >= height)
                     break;
-                if (col < width) {
+                if (col < width) 
+                {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
                     // data is RGBA for one pixel, data[3] is alpha
-                    if (data[3] !== 0) { 
+                    if (data[3] !== 0) 
+                    { 
                         let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
                     col++;
                 }
-                else { // Reached end of row, jump to next
+                else // Reached end of row, jump to next 
+                { 
                     row++;
                     col = 0;
                 }
             }
-            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) { // recall function
+            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) // recall function
+            { 
                 setTimeout(doChunk, 1); 
             }
         };  
@@ -261,24 +303,33 @@ export class PixelWrapper
 
     progress (row, chunkSize, chunkNum, height, backgroundLayer) 
     {
-        if (row === height || this.exportInterrupted) {
+        if (row === height || this.exportInterrupted) 
+        {
             this.layersCount -= 1;
         }
-        if (row < height && !this.exportInterrupted) {
+        if (row < height && !this.exportInterrupted) 
+        {
             let percentage = (chunkNum * chunkSize) * 100 / (height * chunkSize),
                 roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
             this.pixelInstance.uiManager.updateProgress(roundedPercentage);
             return {
                 needsRecall: true
             };
-        } else {
-            if (this.exportInterrupted && (this.layersCount === 0)) {
+        } 
+        else 
+        {
+            if (this.exportInterrupted && (this.layersCount === 0)) 
+            {
                 this.exportInterrupted = false;
                 this.uiManager.destroyExportElements();
                 this.layers.unshift(this.selectRegionLayer);
-            } else if (this.exportInterrupted) {
+            } 
+            else if (this.exportInterrupted) 
+            {
                 // Do nothing and wait until last layer has finished processing to cancel
-            } else if (this.layersCount === 0) { // Done generating background layer
+            } 
+            else if (this.layersCount === 0) 
+            { // Done generating background layer
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();

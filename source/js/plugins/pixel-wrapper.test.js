@@ -137,7 +137,7 @@ describe('Checking Functionality', () => {
 
         await actions.click(submitButton).perform();
         // progress bar should be visible
-        let progressBar = await browser.findElement(By.id('pbar-inner-div'));
+        let progressBar = await browser.wait(until.elementLocated(By.id('pbar-inner-div')), 3000);
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
     test('cancel progress bar button removes the progress div', async () => {
