@@ -178,8 +178,9 @@ export class PixelWrapper
      */
     createBackgroundLayer () 
     {
-        // Don't consider selectRegionLayer for background generation
+        // Don't export selectRegionLayer to Rodan
         this.layers.shift();
+        this.layersCount = this.layers.length;
 
         // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
         // this backgroundLayer is only created upon submitting (so no conflicts)
@@ -187,50 +188,29 @@ export class PixelWrapper
             this.pixelInstance, 0.5, this.pixelInstance.actions),
             maxZoom = this.pixelInstance.core.getSettings().maxZoomLevel,
             width = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).width,
-            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height,
-            selectRegions = this.selectRegionLayer.shapes,
-            regionsInfo = { // For progress method calculations
-                count: 0, // Number of "add" regions
-                sumHeight: 0 // Sum of all "add" regions
-            };
+            height = this.pixelInstance.core.publicInstance.getPageDimensionsAtZoomLevel(this.pageIndex, maxZoom).height;
 
-        // Add selection regions to the backgroundLayer
-        selectRegions.forEach((region) => 
-        {
+        // Add select regions to backgroundLayer
+        this.selectRegionLayer.shapes.forEach((shape) => {
             // Get shape dimensions
-            let x = region.origin.getCoordsInPage(maxZoom).x,
-                y = region.origin.getCoordsInPage(maxZoom).y,
-                rectWidth = region.relativeRectWidth * Math.pow(2, maxZoom),
-                rectHeight = region.relativeRectHeight * Math.pow(2, maxZoom),
+            let x = shape.origin.getCoordsInPage(maxZoom).x,
+                y = shape.origin.getCoordsInPage(maxZoom).y,
+                rectWidth = shape.relativeRectWidth * Math.pow(2, maxZoom),
+                rectHeight = shape.relativeRectHeight * Math.pow(2, maxZoom),
                 rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
-            if (region.blendMode === "subtract") 
+            if (shape.blendMode === "subtract") { 
                 rect.changeBlendModeTo("subtract");
-            else 
-            { 
-                regionsInfo.count++;
-                regionsInfo.sumHeight += rectHeight;
             }
 
             backgroundLayer.addShapeToLayer(rect);
         });
         backgroundLayer.drawLayer(maxZoom, backgroundLayer.getCanvas());
 
-        // Alert and return if user hasn't created a selection region
-        if (regionsInfo.count === 0) 
-        {
-            alert("You haven't created any select regions!");
-            this.layers.unshift(this.selectRegionLayer);
-            return;
-        }
-
         // Instantiate progress bar
         this.uiManager.createExportElements(this);
-        // Total number of regions to iterate over (over all layers)
-        this.totalRegionCount = this.layers.length * regionsInfo.count;
 
-        this.layers.forEach((layer) => 
-        {
+        this.layers.forEach((layer) => {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
             layerCanvas.setAttribute("class", "export-page-canvas");
@@ -240,93 +220,65 @@ export class PixelWrapper
             layerCanvas.height = height;
             layer.drawLayerInPageCoords(maxZoom, layerCanvas, this.pageIndex); 
 
-            // Go over every selection region and subtract layer within this region from background
-            for (var i = 0; i < selectRegions.length; i++) 
-            {
-                let region = selectRegions[i];
-                if (region.blendMode !== "add") 
-                    continue;
-                let dimensions = {
-                    x: region.origin.getCoordsInPage(maxZoom).x,
-                    y: region.origin.getCoordsInPage(maxZoom).y,
-                    width: region.relativeRectWidth * Math.pow(2, maxZoom),
-                    height: region.relativeRectHeight * Math.pow(2, maxZoom)
-                };  
-                this.subtractLayerFromBackground(backgroundLayer, layerCanvas, dimensions, regionsInfo);    
-            }
+            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, width, height);
         });
     }
 
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, dimensions, regionsInfo) 
+    subtractLayerFromBackground (backgroundLayer, layerCanvas, width, height) 
     {
-        var chunkSize = dimensions.width,
-            chunkNum = 0, 
-            col = dimensions.x,
-            row = dimensions.y,
-            // Height and width relative to the origin point (col, row)
-            width = col + dimensions.width,
-            height = row + dimensions.height, 
+        var chunkSize = width,
+            chunkNum = 0,
+            row = 0,
+            col = 0,
             pixelCtx = layerCanvas.getContext('2d');
 
-        let doChunk = () => 
-        { 
+        let doChunk = () => { 
             var cnt = chunkSize;
             chunkNum++;
-            while (cnt--) 
-            { 
+            while (cnt--) { 
                 if (row >= height)
                     break;
-                if (col < width) 
-                {
+                if (col < width) {
                     let data = pixelCtx.getImageData(col, row, 1, 1).data;
                     // data is RGBA for one pixel, data[3] is alpha
-                    if (data[3] !== 0) 
-                    { 
+                    if (data[3] !== 0) { 
                         let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
                         backgroundLayer.addShapeToLayer(currentPixel);
                     }
                     col++;
                 }
-                else 
-                { // Reached end of row, jump to next
+                else { // Reached end of row, jump to next
                     row++;
-                    col = dimensions.x;
+                    col = 0;
                 }
             }
-            // If progress not complete, recall this function
-            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo).incomplete) 
+            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) { // recall function
                 setTimeout(doChunk, 1); 
+            }
         };  
         doChunk();
     }
 
-    progress (row, chunkSize, chunkNum, height, backgroundLayer, regionsInfo) 
+    progress (row, chunkSize, chunkNum, height, backgroundLayer) 
     {
-        if (row === height || this.exportInterrupted) 
-            this.totalRegionCount -= 1;
-        if (row < height && !this.exportInterrupted) 
-        {
-            let percentage = (regionsInfo.count * chunkNum * chunkSize) * 100 / (regionsInfo.sumHeight * chunkSize),
+        if (row === height || this.exportInterrupted) {
+            this.layersCount -= 1;
+        }
+        if (row < height && !this.exportInterrupted) {
+            let percentage = (chunkNum * chunkSize) * 100 / (height * chunkSize),
                 roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
             this.pixelInstance.uiManager.updateProgress(roundedPercentage);
             return {
-                incomplete: true
+                needsRecall: true
             };
-        } 
-        else 
-        {
-            if (this.exportInterrupted && (this.totalRegionCount === 0)) 
-            {
+        } else {
+            if (this.exportInterrupted && (this.layersCount === 0)) {
                 this.exportInterrupted = false;
                 this.uiManager.destroyExportElements();
                 this.layers.unshift(this.selectRegionLayer);
-            } 
-            else if (this.exportInterrupted) 
-            {
+            } else if (this.exportInterrupted) {
                 // Do nothing and wait until last layer has finished processing to cancel
-            } 
-            else if (this.totalRegionCount === 0) 
-            { // Done generating background layer
+            } else if (this.layersCount === 0) { // Done generating background layer
                 backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
                 this.layers.unshift(backgroundLayer);  
                 this.uiManager.destroyExportElements();
