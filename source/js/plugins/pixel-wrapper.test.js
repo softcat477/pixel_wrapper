@@ -137,6 +137,7 @@ describe('Checking Functionality', () => {
 
         await actions.click(submitButton).perform();
         // progress bar should be visible
+        await browser.sleep(1000);
         let progressBar = await browser.findElement(By.id('pbar-inner-div'));
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
