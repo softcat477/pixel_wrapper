@@ -99,7 +99,7 @@ class PixelInteractive(RodanTask):
     name = 'Pixel_js'
     author = 'Zeyad Saleh, Ke Zhang & Andrew Hankinson'
     description = 'Pixel-level ground truth creation and correction'
-    settings = {}
+    settings = {'job_queue': 'Python2'}
     enabled = True
     category = 'Diva - Pixel.js'
     interactive = True
