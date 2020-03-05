@@ -1,6 +1,5 @@
 import rodan
-__version__ = rodan.__version__
-
+__version__ = "1.1.1"
 import logging
 logger = logging.getLogger('rodan')
 
