@@ -255,8 +255,11 @@ export class PixelWrapper
 
         // Instantiate progress bar
         // this.uiManager.createExportElements(this);
-        let bgCtx = backgroundLayer.getCanvas().getContext("2d");
-        bgCtx.globalCompositeOperation = "destination-out";
+        // Draw select region layer on bg layer
+        this.selectRegionLayer.drawLayerInPageCoords(this.maxZoom, backgroundLayer.getCanvas(), this.pageIndex);
+        let ctx = backgroundLayer.getCtx();
+        // Remove parts of user-defined layers from bg
+        ctx.globalCompositeOperation = "destination-out";
 
         this.layers.forEach((layer) =>
         {
@@ -269,8 +272,9 @@ export class PixelWrapper
             layerCanvas.height = this.maxHeight;
             layer.drawLayerInPageCoords(this.maxZoom, layerCanvas, this.pageIndex);
 
-            bgCtx.drawImage(layerCanvas, 0, 0);
-            // this.subtractLayerFromBackground(backgroundLayer, layerCanvas, this.maxWidth, this.maxHeight);
+            if (layer.layerId !== 0) {
+              ctx.drawImage(layerCanvas, 0, 0);
+            }
         });
         this.layers.unshift(backgroundLayer);
         this.exportLayersToRodan();
