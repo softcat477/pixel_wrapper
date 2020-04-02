@@ -274,10 +274,22 @@ class PixelInteractive(RodanTask):
                     data += '=' * (4 - missing_padding % 4)
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
-                layer_image = cv.imdecode(binary_data, cv.IMREAD_GRAYSCALE)
-                _ret, layer_mask = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
-                result = cv.bitwise_and(background, background, mask=layer_mask)
-                cv.imwrite(outfile_path, result)
+
+                # Write so we can properly load
+                outfile = open(outfile_path + ".png", "wb")
+                outfile.write(binary_data)
+                outfile.close()
+
+                # Create mask for alpha channel
+                layer_image = cv.imread(outfile_path + ".png", cv.IMREAD_GRAYSCALE)
+                _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
+
+                # Set background to black (reduce size) and then make transparent
+                result = cv.bitwise_and(background, background, mask=alpha)
+                b, g, r = cv.split(result)
+                result = cv.merge([b, g, r, alpha], 4)
+                cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension
+                os.rename(outfile_path + ".png", outfile_path)
         return True
 
     def validate_my_user_input(self, inputs, settings, user_input):
