@@ -4,6 +4,7 @@ from rodan.settings import MEDIA_URL, MEDIA_ROOT
 from rodan.jobs.base import RodanTask
 from django.conf import settings
 import json
+import numpy as np
 import cv2 as cv
 
 
@@ -107,7 +108,17 @@ class PixelInteractive(RodanTask):
     name = 'Pixel_js'
     author = 'Zeyad Saleh, Ke Zhang & Andrew Hankinson'
     description = 'Pixel-level ground truth creation and correction'
-    settings = {'job_queue': 'Python2'}
+    settings = {
+            'title': 'Options',
+            'type': 'object',
+            'properties': {
+                'Output Mask': {
+                    'type': 'boolean',
+                    'default': True
+                }
+            },
+            'job_queue': 'Python2',
+    }
     enabled = True
     category = 'Diva - Pixel.js'
     interactive = True
@@ -275,20 +286,22 @@ class PixelInteractive(RodanTask):
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
 
-                # Write so we can properly load
-                outfile = open(outfile_path + ".png", "wb")
-                outfile.write(binary_data)
-                outfile.close()
+                array = np.fromstring(binary_data, np.uint8)
 
-                # Create mask for alpha channel
-                layer_image = cv.imread(outfile_path + ".png", cv.IMREAD_GRAYSCALE)
-                _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
+                if settings['Output Mask']:
+                    tmp = cv.imdecode(array, cv.IMREAD_UNCHANGED)
+                    cv.imwrite(outfile_path + ".png", tmp)
+                else:
+                    # Create mask for alpha channel
+                    layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
+                    _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
 
-                # Set background to black (reduce size) and then make transparent
-                result = cv.bitwise_and(background, background, mask=alpha)
-                b, g, r = cv.split(result)
-                result = cv.merge([b, g, r, alpha], 4)
-                cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension
+                    # Set background to black (reduce size) and then make transparent
+                    result = cv.bitwise_and(background, background, mask=alpha)
+                    b, g, r = cv.split(result)
+                    result = cv.merge([b, g, r, alpha], 4)
+                    cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension
+
                 os.rename(outfile_path + ".png", outfile_path)
         return True
 
