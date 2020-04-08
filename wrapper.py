@@ -114,7 +114,7 @@ class PixelInteractive(RodanTask):
             'properties': {
                 'Output Mask': {
                     'type': 'boolean',
-                    'default': True
+                    'default': False
                 }
             },
             'job_queue': 'Python2',
