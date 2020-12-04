@@ -303,6 +303,10 @@ class PixelInteractive(RodanTask):
                     cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension
 
                 os.rename(outfile_path + ".png", outfile_path)
+        
+        # Cleanup image data from job description when finished.
+        if '@done' in settings:
+          del settings['@user_input']
         return True
 
     def validate_my_user_input(self, inputs, settings, user_input):
