@@ -9,24 +9,27 @@ from shutil import rmtree
 import logging
 logger = logging.getLogger('rodan')
 
+
 def media_file_path_to_public_url(media_file_path):
     chars_to_remove = len(MEDIA_ROOT)
     return os.path.join(MEDIA_URL, media_file_path[chars_to_remove:])
 
-def get_iiif_query (resource_path):
-		resource_path = resource_path.split('/')
-		resource_path.remove('')
-		resource_path.remove('rodan')
-		resource_path.remove('data')
-		del resource_path[-1]	# last element is the original uncoverted file
-		resource_path.append('diva')
-		resource_path.append('image.jp2')
-		resource_path = '%2F'.join(resource_path)
 
-		server_url = settings.IIPSRV_URL
-		query = server_url + '?IIIF=' + resource_path
-    
-		return query
+def get_iiif_query(resource_path):
+    resource_path = resource_path.split('/')
+    resource_path.remove('')
+    resource_path.remove('rodan')
+    resource_path.remove('data')
+    del resource_path[-1]  # last element is the original uncoverted file
+    resource_path.append('diva')
+    resource_path.append('image.jp2')
+    resource_path = '%2F'.join(resource_path)
+
+    server_url = settings.IIPSRV_URL
+    query = server_url + '?IIIF=' + resource_path
+
+    return query
+
 
 def get_image_dimensions(resource_path):
     """
@@ -41,24 +44,25 @@ def get_image_dimensions(resource_path):
     data = json.load(open(resource_path))
     return [data['dims']['max_h'][-1], data['dims']['max_w'][-1]]
 
+
 def get_images(resource_path):
-    query_url = get_iiif_query (resource_path)
+    query_url = get_iiif_query(resource_path)
     height, width = get_image_dimensions(resource_path)
     return [
-                {
-                    "@type":"oa:Annotation",
-                    "motivation":"sc:painting",
-                    "resource": {
-                                    "@id": query_url,
-                                    "@type":"dctypes:Image",
-                                    "format":"image/jpeg",
-                                    "height":height,
-                                    "width":width,
-                                    "service": {
-                                                    "@context": "http://iiif.io/api/image/2/context.json", "@id": query_url, "profile": "http://iiif.io/api/image/2/level2.json"
-                                                }
-                                },
-                    "on":"https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
+            {
+                "@type": "oa:Annotation",
+                "motivation": "sc:painting",
+                "resource": {
+                    "@id": query_url,
+                    "@type": "dctypes:Image",
+                    "format": "image/jpeg",
+                    "height":height,
+                    "width":width,
+                    "service": {
+                        "@context": "http://iiif.io/api/image/2/context.json", "@id": query_url, "profile": "http://iiif.io/api/image/2/level2.json"
+                        }
+                    },
+                "on": "https://images.simssa.ca/iiif/manuscripts/cdn-hsmu-m2149l4/canvas/folio-001r.json"
                 }
             ]
 
@@ -74,18 +78,21 @@ def create_canvases(resource_path):
     data['images'] = get_images(resource_path)
     return [data]
 
+
 def create_sequences(resource_path):
     data = {}
     data['@type'] = 'sc:Sequence'
     data['canvases'] = create_canvases(resource_path)
     return [data]
 
+
 def create_metadata(resource_path):
-    return [    
-                {"label": "Date", "value": "1554-5"},
-                {"label": "Siglum", "value": "CDN-Hsmu M2149.L4"},
-                {"label": "Provenance", "value": "Salzinnes"}
-           ]
+    return [
+            {"label": "Date", "value": "1554-5"},
+            {"label": "Siglum", "value": "CDN-Hsmu M2149.L4"},
+            {"label": "Provenance", "value": "Salzinnes"}
+            ]
+
 
 def create_json(resource_path):
     data = {}
@@ -103,68 +110,78 @@ class PixelInteractive(RodanTask):
     name = 'Pixel_js'
     author = 'Zeyad Saleh, Ke Zhang & Andrew Hankinson'
     description = 'Pixel-level ground truth creation and correction'
-    settings = {}
+    settings = {
+            'title': 'Options',
+            'type': 'object',
+            'properties': {
+                'Output Mask': {
+                    'type': 'boolean',
+                    'default': False
+                }
+            },
+            'job_queue': 'Python2',
+    }
     enabled = True
     category = 'Diva - Pixel.js'
     interactive = True
     input_port_types = [
-        {
-            'name': 'Image',
-            'resource_types': lambda mime: mime.startswith('image/'), 
-            'minimum': 1,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 1 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 2 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 3 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 4 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 5 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 6 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'PNG - Layer 7 Input',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-    ]
+            {
+                'name': 'Image',
+                'resource_types': lambda mime: mime.startswith('image/'),
+                'minimum': 1,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 1 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 2 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 3 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 4 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 5 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                'name': 'PNG - Layer 6 Input',
+                'resource_types': ['image/rgba+png'],
+                'minimum': 0,
+                'maximum': 1,
+                'is_list': False
+                },
+            {
+                    'name': 'PNG - Layer 7 Input',
+                    'resource_types': ['image/rgba+png'],
+                    'minimum': 0,
+                    'maximum': 1,
+                    'is_list': False
+                    },
+            ]
     output_port_types = [
         # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
         {
@@ -189,14 +206,16 @@ class PixelInteractive(RodanTask):
 
         # Create data to pass.
         data = {
-            'json': create_json(inputs['Image'][0]['resource_path']),
-            'layer_urls': layer_urls,
-        }
+                'json': create_json(inputs['Image'][0]['resource_path']),
+                'layer_urls': layer_urls,
+                }
         return ('index.html', data)
 
     def run_my_task(self, inputs, settings, outputs):
         if '@done' not in settings:
-            return self.WAITING_FOR_INPUT() 
+            return self.WAITING_FOR_INPUT()
+
+        list = settings['@user_input']    # List passed having the image data (base 64) from all layer
 
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
         # Output path
@@ -208,7 +227,7 @@ class PixelInteractive(RodanTask):
                 if i != len(output_list):
                     data = output_list[i].split(',')[1]    # Remove header from the base 64 string
                 missing_padding = len(data) % 4
-                
+
                 if missing_padding != 0:
                     data += '=' * (4 - missing_padding % 4)
 

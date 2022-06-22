@@ -128,7 +128,7 @@ describe('Checking Functionality', () => {
         expect(await alert.getText()).toBe("You haven't created any select regions!");
         await alert.accept();
     });
-    test('drawing select region then submit to rodan creates progress bar', async () => {
+    test.skip('drawing select region then submit to rodan creates progress bar', async () => {
         let canvas = await browser.findElement(By.id('layer--1-canvas'));
         const actions = browser.actions();
         // select rectangle tool and draw one
@@ -141,7 +141,7 @@ describe('Checking Functionality', () => {
         let progressBar = await browser.findElement(By.id('pbar-inner-div'));
         expect(await progressBar.isDisplayed()).toBeTruthy();
     });
-    test('cancel progress bar button removes the progress div', async () => {
+    test.skip('cancel progress bar button removes the progress div', async () => {
         let cancelButton = await browser.findElement(By.id('cancel-export-div'));
         const actions = browser.actions();
         await actions.click(cancelButton).perform();
