@@ -200,7 +200,7 @@ class PixelInteractive(RodanTask):
 
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
         # Output path
-        outfile_path = outputs["ZIP"][0]['resource_path'] + ".tgz"
+        outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
 
         with zipfile.ZipFile(outfile_path, 'w') as zipMe:        
             for i in range(0, len(output_list) + 1):
@@ -214,13 +214,13 @@ class PixelInteractive(RodanTask):
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
                 if i == len(output_list):
-                    zipMe.writestr(('image.png'), data.decode())
+                    zipMe.writestr(('image.png'), binary_data)
                 elif i == 0:
-                    zipMe.writestr(('background.png'), data.decode())
+                    zipMe.writestr(('background.png'), binary_data)
                 elif i == len(output_list) - 1:
-                    zipMe.writestr(('region.png'), data.decode())
+                    zipMe.writestr(('region.png'), binary_data)
                 else:
-                    zipMe.writestr(('layer{0}.png').format(i), data.decode())              
+                    zipMe.writestr(('layer{0}.png').format(i), binary_data)              
 
         # add the files to the zip file
         os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
