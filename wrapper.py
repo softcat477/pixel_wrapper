@@ -205,7 +205,8 @@ class PixelInteractive(RodanTask):
         with zipfile.ZipFile(outfile_path, 'w') as zipMe:        
             for i in range(0, len(output_list) + 1):
                 # change to bytes 
-                data = output_list[i].split(',')[1]    # Remove header from the base 64 string
+                if i != len(output_list):
+                    data = output_list[i].split(',')[1]    # Remove header from the base 64 string
                 missing_padding = len(data) % 4
                 
                 if missing_padding != 0:
