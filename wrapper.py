@@ -214,13 +214,13 @@ class PixelInteractive(RodanTask):
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
                 if i == len(output_list):
-                    zipMe.writestr(('image.png'), data)
+                    zipMe.writestr(('image.png'), decode(data))
                 elif i == 0:
-                    zipMe.writestr(('background.png'), data)
+                    zipMe.writestr(('background.png'), decode(data))
                 elif i == len(output_list) - 1:
-                    zipMe.writestr(('region.png'), data)
+                    zipMe.writestr(('region.png'), decode(data))
                 else:
-                    zipMe.writestr(('layer{0}.png').format(i), data)              
+                    zipMe.writestr(('layer{0}.png').format(i), decode(data))              
 
         # add the files to the zip file
         os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
