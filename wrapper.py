@@ -4,6 +4,10 @@ from rodan.settings import MEDIA_URL, MEDIA_ROOT
 from rodan.jobs.base import RodanTask
 from django.conf import settings
 import json
+import zipfile
+from shutil import rmtree
+import logging
+logger = logging.getLogger('rodan')
 
 def media_file_path_to_public_url(media_file_path):
     chars_to_remove = len(MEDIA_ROOT)
@@ -155,7 +159,7 @@ class PixelInteractive(RodanTask):
         },
         {
             'name': 'PNG - Layer 7 Input',
-            'resource_types': ['image/rgba+png'],
+            'resource_types': ['application/zip'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
@@ -164,68 +168,12 @@ class PixelInteractive(RodanTask):
     output_port_types = [
         # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
         {
-            'name': 'rgba PNG - Layer 0 Output',
-            'resource_types': ['image/rgba+png'],
+            'name': 'ZIP',
+            'resource_types': ['application/zip'],
             'minimum': 1,
             'maximum': 1,
             'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 1 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 2 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 3 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 4 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 5 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 6 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 7 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
-        {
-            'name': 'rgba PNG - Layer 8 Output',
-            'resource_types': ['image/rgba+png'],
-            'minimum': 0,
-            'maximum': 1,
-            'is_list': False
-        },
+        }
     ]
 
     def get_my_interface(self, inputs, settings):
@@ -250,28 +198,38 @@ class PixelInteractive(RodanTask):
         if '@done' not in settings:
             return self.WAITING_FOR_INPUT() 
 
-        list=settings['@user_input']    # List passed having the image data (base 64) from all layer
+        output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
+        original_image = output_list[0]
+        logger.info(("original image is {}").format(original_image))
+        # Output path
+        outfile_path = outputs["ZIP"][0]['resource_path'] + ".tgz"
 
-        for i in range(0, len(list)):
-            port = "rgba PNG - Layer %d Output" % (i)
-            if port in outputs:
-                outfile_path = outputs[port][0]['resource_path']
-                data = list[i].split(',')[1]    # Remove header from the base 64 string
+        with zipfile.ZipFile(outfile_path, 'w') as zipMe:        
+            for i in range(0, len(output_list) + 1):
+                # change to bytes 
+                data = output_list[i].split(',')[1]    # Remove header from the base 64 string
                 missing_padding = len(data) % 4
                 
                 if missing_padding != 0:
                     data += '=' * (4 - missing_padding % 4)
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
-                outfile = open(outfile_path + '.png', "wb")
-                outfile.write(binary_data)
-                outfile.close()
-                os.rename(outputs[port][0]['resource_path']+'.png',outputs[port][0]['resource_path'])
+                if i == len(output_list):
+                    zipMe.writestr(data, arcname=('image.png'))
+                elif i == 0:
+                    zipMe.writestr(data, arcname=('background.png'))
+                elif i == len(output_list) - 1:
+                    zipMe.writestr(data, arcname=('region.png'))
+                else:
+                    zipMe.writestr(data, arcname=('layer{i}.png'))              
+
+        # add the files to the zip file
+        os.rename(outputs["ZIP"][0]['resource_path']+'.tgz',outputs["ZIP"][0]['resource_path'])
         return True
 
     def validate_my_user_input(self, inputs, settings, user_input):
         return { '@done': True, '@user_input': user_input['user_input'] }
 
     def my_error_information(self, exc, traceback):
-	pass
+	    pass
 
