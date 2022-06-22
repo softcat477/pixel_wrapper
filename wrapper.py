@@ -4,6 +4,8 @@ from rodan.settings import MEDIA_URL, MEDIA_ROOT
 from rodan.jobs.base import RodanTask
 from django.conf import settings
 import json
+import numpy as np
+import cv2 as cv
 import zipfile
 import logging
 logger = logging.getLogger('rodan')
@@ -214,8 +216,8 @@ class PixelInteractive(RodanTask):
         if '@done' not in settings:
             return self.WAITING_FOR_INPUT()
 
-        list = settings['@user_input']    # List passed having the image data (base 64) from all layer
-
+        # list = settings['@user_input']    # List passed having the image data (base 64) from all layer
+        background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_COLOR)
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
         # Output path
         outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
@@ -231,14 +233,41 @@ class PixelInteractive(RodanTask):
                     data += '=' * (4 - missing_padding % 4)
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
-                if i == len(output_list):
-                    zipMe.writestr(('Image.png'), binary_data)
-                elif i == 0:
-                    zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), binary_data)
-                elif i == len(output_list) - 1:
-                    zipMe.writestr(('rgba PNG - Selected regions.png'), binary_data)
+                array = np.fromstring(binary_data, np.uint8)
+
+                if settings['Output Mask']:
+                    tmp = cv.imdecode(array, cv.IMREAD_UNCHANGED)
+                    retval, buf = cv.imencode('.png', tmp)
+                    if i == len(output_list):
+                        retval, buf = cv.imencode('.png', background)
+                        zipMe.writestr(('Image.png'), buf)
+                    elif i == 0:
+                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
+                    elif i == len(output_list) - 1:
+                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
+                    else:
+                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
+                    # cv.imwrite(outfile_path + ".png", tmp)
                 else:
-                    zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), binary_data)              
+                    # Create mask for alpha channel
+                    layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
+                    _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
+
+                    # Set background to black (reduce size) and then make transparent
+                    result = cv.bitwise_and(background, background, mask=alpha)
+                    b, g, r = cv.split(result)
+                    result = cv.merge([b, g, r, alpha], 4)
+                    retval, buf = cv.imencode('.png', result)
+                    if i == len(output_list):
+                        retval, buf = cv.imencode('.png', background)
+                        zipMe.writestr(('Image.png'), buf)
+                    elif i == 0:
+                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
+                    elif i == len(output_list) - 1:
+                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
+                    else:
+                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
+                    # cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension            
 
         # add the files to the zip file
         os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
@@ -249,4 +278,3 @@ class PixelInteractive(RodanTask):
 
     def my_error_information(self, exc, traceback):
 	    pass
-
