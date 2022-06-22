@@ -5,7 +5,6 @@ from rodan.jobs.base import RodanTask
 from django.conf import settings
 import json
 import zipfile
-from shutil import rmtree
 import logging
 logger = logging.getLogger('rodan')
 
