@@ -159,7 +159,7 @@ class PixelInteractive(RodanTask):
         },
         {
             'name': 'PNG - Layer 7 Input',
-            'resource_types': ['application/zip'],
+            'resource_types': ['image/rgba+png'],
             'minimum': 0,
             'maximum': 1,
             'is_list': False
@@ -199,8 +199,6 @@ class PixelInteractive(RodanTask):
             return self.WAITING_FOR_INPUT() 
 
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
-        original_image = output_list[0]
-        logger.info(("original image is {}").format(original_image))
         # Output path
         outfile_path = outputs["ZIP"][0]['resource_path'] + ".tgz"
 
@@ -224,7 +222,7 @@ class PixelInteractive(RodanTask):
                     zipMe.writestr(data, arcname=('layer{i}.png'))              
 
         # add the files to the zip file
-        os.rename(outputs["ZIP"][0]['resource_path']+'.tgz',outputs["ZIP"][0]['resource_path'])
+        os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
         return True
 
     def validate_my_user_input(self, inputs, settings, user_input):
