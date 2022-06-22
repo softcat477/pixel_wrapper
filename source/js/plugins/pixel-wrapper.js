@@ -68,7 +68,7 @@ export class PixelWrapper
             // string instead of textNode so newlines can be used
             tooltipText = "<p>While in the Select Region Layer, use the " +
             "rectangle tool to select the regions of the page that you will classify.</p>" +
-            "<p>Once you select these regions, select another layer and begin classifying! " + 
+            "<p>Once you select these regions, select another layer and begin classifying! " +
             "Keep in mind that classification outside these regions will not be utilized.</p>" +
             "<p>You can select the entire page by pressing <b>SHIFT + A</b>.</p>" +
             "<p>You can deselect the entire page by pressing <b>ESC</b>. This will destroy all selection regions " +
@@ -84,7 +84,7 @@ export class PixelWrapper
     }
 
 
-    createButtons () 
+    createButtons ()
     {
         let rodanExportButton = document.createElement("button"),
             rodanExportText = document.createTextNode("Submit To Rodan");
@@ -95,7 +95,7 @@ export class PixelWrapper
         rodanExportButton.appendChild(rodanExportText);
         rodanExportButton.addEventListener("click", this.exportToRodan);
 
-        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader')); 
+        document.body.insertBefore(rodanExportButton, document.getElementById('imageLoader'));
     }
 
     destroyButtons ()
@@ -107,7 +107,7 @@ export class PixelWrapper
 
     /**
      *  Creates the number of required layers based on the number of input ports in the Rodan job.
-     *  The variable numberInputLayers is actually defined in the outermost index.html 
+     *  The variable numberInputLayers is actually defined in the outermost index.html
      */
     createLayers ()
     {
@@ -115,15 +115,15 @@ export class PixelWrapper
         this.pixelInstance.tools.currentTool = "rectangle";
 
         // Only create default layers once
-        if (this.layers.length !== 1) 
+        if (this.layers.length !== 1)
             return;
 
-        let numLayers = numberInputLayers; 
+        let numLayers = numberInputLayers;
 
         // Ask user how many layers to create if there's no input
-        if (numberInputLayers === 0) 
+        if (numberInputLayers === 0)
         {
-            while (numLayers <= 0 || numLayers > 7) 
+            while (numLayers <= 0 || numLayers > 7)
             {
                 numLayers = parseInt(prompt("How many layers will you classify?\n" +
                 "This must be two (2) less than the total number of output ports.", 3));
@@ -133,12 +133,12 @@ export class PixelWrapper
         this.selectRegionLayer = new Layer(-1, new Colour(240, 232, 227, 1), "Select Region", this.pixelInstance, 0.3);
         this.layers.unshift(this.selectRegionLayer);
 
-        // There is 1 active layer already created by default in PixelPlugin with layerId = 1, 
+        // There is 1 active layer already created by default in PixelPlugin with layerId = 1,
         // so start at 2, and ignore one input layer which gets assigned to layer 1. Max 7 input
-        for (var i = 2; i < numLayers + 1; i++) 
-        { 
+        for (var i = 2; i < numLayers + 1; i++)
+        {
             let colour;
-            switch (i) 
+            switch (i)
             {
                 case 2:
                     colour = new Colour(255, 51, 102, 1);
@@ -165,7 +165,7 @@ export class PixelWrapper
 
         this.pixelInstance.layerIdCounter = this.layers.length;
 
-        // Refresh UI 
+        // Refresh UI
         this.uiManager.destroyPluginElements(this.layers, this.pixelInstance.background);
         this.uiManager.createPluginElements(this.layers);
     }
@@ -179,45 +179,56 @@ export class PixelWrapper
         let count = this.layers.length;
         let urlList = [];
 
-        this.layers.forEach((layer) => 
-        {    
+        this.layers.forEach((layer) =>
+        {
             console.log(layer.layerId + " " + layer.layerName);
 
             let dataURL = layer.getCanvas().toDataURL();
-            urlList.push(dataURL); 
+            urlList.push(dataURL);
             count -= 1;
                 if (count === 0)
                 {
                     console.log(urlList);
                     console.log("done");
 
-                    $.ajax({url: '', type: 'POST', data: JSON.stringify({'user_input': urlList}), contentType: 'application/json'});
+                    $.ajax({
+                        url: '',
+                        type: 'POST',
+                        data: JSON.stringify({'user_input': urlList}),
+                        contentType: 'application/json',
+                        success: () => {
+                            setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 1000);
+                            setTimeout(function(){ window.close(); }, 1200);
+                        },
+                        error: (jqXHR, textStatus, errorThrown) => {
+                            console.log(jqXHR);
+                            console.log(textStatus);
+                            console.log(errorThrown);
+                            alert("An error occurred: " + errorThrown);
+                        }
+                    });
                 }
         });
-
-        // Alert and close Pixel after submitting
-        setTimeout(function(){ alert("Submission successful! Click OK to exit Pixel.js."); }, 1000);
-        setTimeout(function(){ window.close(); }, 1200);
     }
 
     /**
      *  Generates a background layer by iterating over all the pixel data for each layer within the
-     *  selection regions, and subtracting it from the background layer if the data is 
+     *  selection regions, and subtracting it from the background layer if the data is
      *  non-transparent (alpha != 0). Uses the uiManager progress bar and exports to Rodan when done
      */
-    createBackgroundLayer () 
+    createBackgroundLayer ()
     {
         // Don't export selectRegionLayer to Rodan
         this.layers.shift();
         this.layersCount = this.layers.length;
 
-        // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but 
+        // NOTE: this backgroundLayer and the original background (image) both have layerId 0, but
         // this backgroundLayer is only created upon submitting (so no conflicts)
-        let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer", 
+        let backgroundLayer = new Layer(0, new Colour(242, 0, 242, 1), "Background Layer",
             this.pixelInstance, 0.5, this.pixelInstance.actions);
 
         // Add select regions to backgroundLayer
-        this.selectRegionLayer.shapes.forEach((shape) => 
+        this.selectRegionLayer.shapes.forEach((shape) =>
         {
             // Get shape dimensions
             let x = shape.origin.getCoordsInPage(this.maxZoom).x,
@@ -226,7 +237,7 @@ export class PixelWrapper
                 rectHeight = shape.relativeRectHeight * Math.pow(2, this.maxZoom),
                 rect = new Rectangle(new Point(x, y, this.pageIndex), rectWidth, rectHeight, "add");
 
-            if (shape.blendMode === "subtract") { 
+            if (shape.blendMode === "subtract") {
                 rect.changeBlendModeTo("subtract");
             }
 
@@ -235,7 +246,7 @@ export class PixelWrapper
         backgroundLayer.drawLayer(this.maxZoom, backgroundLayer.getCanvas());
 
         // Alert and return if user hasn't created a selection region
-        if (this.selectRegionLayer.shapes.length === 0) 
+        if (this.selectRegionLayer.shapes.length === 0)
         {
             alert("You haven't created any select regions!");
             this.layers.unshift(this.selectRegionLayer);
@@ -243,9 +254,14 @@ export class PixelWrapper
         }
 
         // Instantiate progress bar
-        this.uiManager.createExportElements(this);
+        // this.uiManager.createExportElements(this);
+        // Draw select region layer on bg layer
+        this.selectRegionLayer.drawLayerInPageCoords(this.maxZoom, backgroundLayer.getCanvas(), this.pageIndex);
+        let ctx = backgroundLayer.getCtx();
+        // Remove parts of user-defined layers from bg
+        ctx.globalCompositeOperation = "destination-out";
 
-        this.layers.forEach((layer) => 
+        this.layers.forEach((layer) =>
         {
             // Create layer canvas and draw (so pixel data can be accessed)
             let layerCanvas = document.createElement('canvas');
@@ -254,95 +270,18 @@ export class PixelWrapper
             layerCanvas.setAttribute("style", "position: absolute; top: 0; left: 0;");
             layerCanvas.width = this.maxWidth;
             layerCanvas.height = this.maxHeight;
-            layer.drawLayerInPageCoords(this.maxZoom, layerCanvas, this.pageIndex); 
+            layer.drawLayerInPageCoords(this.maxZoom, layerCanvas, this.pageIndex);
 
-            this.subtractLayerFromBackground(backgroundLayer, layerCanvas, this.maxWidth, this.maxHeight);
+            if (layer.layerId !== 0) {
+              ctx.drawImage(layerCanvas, 0, 0);
+            }
         });
-    }
-
-    subtractLayerFromBackground (backgroundLayer, layerCanvas, width, height) 
-    {
-        var chunkSize = width,
-            chunkNum = 0,
-            row = 0,
-            col = 0,
-            pixelCtx = layerCanvas.getContext('2d');
-
-        let doChunk = () => 
-        { 
-            var cnt = chunkSize;
-            chunkNum++;
-            while (cnt--) 
-            { 
-                if (row >= height)
-                    break;
-                if (col < width) 
-                {
-                    let data = pixelCtx.getImageData(col, row, 1, 1).data;
-                    // data is RGBA for one pixel, data[3] is alpha
-                    if (data[3] !== 0) 
-                    { 
-                        let currentPixel = new Rectangle(new Point(col, row, this.pageIndex), 1, 1, "subtract");
-                        backgroundLayer.addShapeToLayer(currentPixel);
-                    }
-                    col++;
-                }
-                else // Reached end of row, jump to next 
-                { 
-                    row++;
-                    col = 0;
-                }
-            }
-            if (this.progress(row, chunkSize, chunkNum, height, backgroundLayer).needsRecall) // recall function
-            { 
-                setTimeout(doChunk, 1); 
-            }
-        };  
-        doChunk();
-    }
-
-    progress (row, chunkSize, chunkNum, height, backgroundLayer) 
-    {
-        if (row === height || this.exportInterrupted) 
-        {
-            this.layersCount -= 1;
-        }
-        if (row < height && !this.exportInterrupted) 
-        {
-            let percentage = (chunkNum * chunkSize) * 100 / (height * chunkSize),
-                roundedPercentage = (percentage > 100) ? 100 : Math.round(percentage * 10) / 10;
-            this.pixelInstance.uiManager.updateProgress(roundedPercentage);
-            return {
-                needsRecall: true
-            };
-        } 
-        else 
-        {
-            if (this.exportInterrupted && (this.layersCount === 0)) 
-            {
-                this.exportInterrupted = false;
-                this.uiManager.destroyExportElements();
-                this.layers.unshift(this.selectRegionLayer);
-            } 
-            else if (this.exportInterrupted) 
-            {
-                // Do nothing and wait until last layer has finished processing to cancel
-            } 
-            else if (this.layersCount === 0) 
-            { // Done generating background layer
-                backgroundLayer.drawLayer(0, backgroundLayer.getCanvas());
-                this.layers.unshift(backgroundLayer);  
-                this.uiManager.destroyExportElements();
-                this.exportLayersToRodan();
-            }
-        }
-        return {
-            needsRecall: false
-        };
+        this.layers.unshift(backgroundLayer);
+        this.exportLayersToRodan();
     }
 
     /**
-     *  Handles the Rodan input layers and draws them on each layer in Pixel 
+     *  Handles the Rodan input layers and draws them on each layer in Pixel
      */
     rodanImagesToCanvas ()
     {
