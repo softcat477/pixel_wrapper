@@ -6,6 +6,9 @@ from django.conf import settings
 import json
 import numpy as np
 import cv2 as cv
+import zipfile
+import logging
+logger = logging.getLogger('rodan')
 
 
 def media_file_path_to_public_url(media_file_path):
@@ -181,71 +184,15 @@ class PixelInteractive(RodanTask):
                     },
             ]
     output_port_types = [
-            # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
-            {
-                'name': 'rgba PNG - Layer 0 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 1,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 1 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 2 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 3 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 4 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 5 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                'name': 'rgba PNG - Layer 6 Output',
-                'resource_types': ['image/rgba+png'],
-                'minimum': 0,
-                'maximum': 1,
-                'is_list': False
-                },
-            {
-                    'name': 'rgba PNG - Layer 7 Output',
-                    'resource_types': ['image/rgba+png'],
-                    'minimum': 0,
-                    'maximum': 1,
-                    'is_list': False
-                    },
-            {
-                    'name': 'rgba PNG - Layer 8 Output',
-                    'resource_types': ['image/rgba+png'],
-                    'minimum': 0,
-                    'maximum': 1,
-                    'is_list': False
-                    },
-            ]
+        # {'name': 'Text output', 'minimum': 1, 'maximum': 1, 'resource_types': ['text/plain']},
+        {
+            'name': 'ZIP',
+            'resource_types': ['application/zip'],
+            'minimum': 1,
+            'maximum': 1,
+            'is_list': False
+        }
+    ]
 
     def get_my_interface(self, inputs, settings):
         # Get input.
@@ -269,28 +216,38 @@ class PixelInteractive(RodanTask):
         if '@done' not in settings:
             return self.WAITING_FOR_INPUT()
 
-        list = settings['@user_input']    # List passed having the image data (base 64) from all layer
-
-        # Get source image
+        # list = settings['@user_input']    # List passed having the image data (base 64) from all layer
         background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_COLOR)
+        output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
+        # Output path
+        outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
 
-        for i in range(0, len(list)):
-            port = "rgba PNG - Layer %d Output" % (i)
-            if port in outputs:
-                outfile_path = outputs[port][0]['resource_path']
-                data = list[i].split(',')[1]    # Remove header from the base 64 string
+        with zipfile.ZipFile(outfile_path, 'w') as zipMe:        
+            for i in range(0, len(output_list) + 1):
+                # change to bytes 
+                if i != len(output_list):
+                    data = output_list[i].split(',')[1]    # Remove header from the base 64 string
                 missing_padding = len(data) % 4
 
                 if missing_padding != 0:
                     data += '=' * (4 - missing_padding % 4)
 
                 binary_data = a2b_base64(data)   # Parse base 64 image data
-
                 array = np.fromstring(binary_data, np.uint8)
 
                 if settings['Output Mask']:
                     tmp = cv.imdecode(array, cv.IMREAD_UNCHANGED)
-                    cv.imwrite(outfile_path + ".png", tmp)
+                    retval, buf = cv.imencode('.png', tmp)
+                    if i == len(output_list):
+                        retval, buf = cv.imencode('.png', background)
+                        zipMe.writestr(('Image.png'), buf)
+                    elif i == 0:
+                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
+                    elif i == len(output_list) - 1:
+                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
+                    else:
+                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
+                    # cv.imwrite(outfile_path + ".png", tmp)
                 else:
                     # Create mask for alpha channel
                     layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
@@ -300,17 +257,24 @@ class PixelInteractive(RodanTask):
                     result = cv.bitwise_and(background, background, mask=alpha)
                     b, g, r = cv.split(result)
                     result = cv.merge([b, g, r, alpha], 4)
-                    cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension
+                    retval, buf = cv.imencode('.png', result)
+                    if i == len(output_list):
+                        retval, buf = cv.imencode('.png', background)
+                        zipMe.writestr(('Image.png'), buf)
+                    elif i == 0:
+                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
+                    elif i == len(output_list) - 1:
+                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
+                    else:
+                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
+                    # cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension            
 
-                os.rename(outfile_path + ".png", outfile_path)
-        
-        # Cleanup image data from job description when finished.
-        if '@done' in settings:
-          del settings['@user_input']
+        # add the files to the zip file
+        os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
         return True
 
     def validate_my_user_input(self, inputs, settings, user_input):
         return { '@done': True, '@user_input': user_input['user_input'] }
 
     def my_error_information(self, exc, traceback):
-        pass
+	    pass
