@@ -1,9 +1,3 @@
 - mimetype: text/plain
   description: Plain text
   extension: txt
-- mimetype: image/rgba+png
-  description: rgba png image
-  extension: png
-- mimetype: application/zip
-  description: zip file
-  extension: zip
