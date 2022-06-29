@@ -217,7 +217,7 @@ class PixelInteractive(RodanTask):
             return self.WAITING_FOR_INPUT()
 
         # list = settings['@user_input']    # List passed having the image data (base 64) from all layer
-        background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_COLOR)
+        background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_UNCHANGED)
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
         # Output path
         outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
@@ -252,11 +252,9 @@ class PixelInteractive(RodanTask):
                     # Create mask for alpha channel
                     layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
                     _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
-
+                    alpha = alpha == 255
                     # Set background to black (reduce size) and then make transparent
-                    result = cv.bitwise_and(background, background, mask=alpha)
-                    b, g, r = cv.split(result)
-                    result = cv.merge([b, g, r, alpha], 4)
+                    result = background*(alpha[:,:,np.newaxis])
                     retval, buf = cv.imencode('.png', result)
                     if i == len(output_list):
                         retval, buf = cv.imencode('.png', background)
@@ -266,8 +264,7 @@ class PixelInteractive(RodanTask):
                     elif i == len(output_list) - 1:
                         zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
                     else:
-                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
-                    # cv.imwrite(outfile_path + ".png", result)  # cv2 needs extension            
+                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)            
 
         # add the files to the zip file
         os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
