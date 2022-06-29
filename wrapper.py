@@ -218,6 +218,7 @@ class PixelInteractive(RodanTask):
 
         # list = settings['@user_input']    # List passed having the image data (base 64) from all layer
         background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_UNCHANGED)
+        background = cv.cvtColor(background, cv.COLOR_BGR2BGRA)
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
         # Output path
         outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
