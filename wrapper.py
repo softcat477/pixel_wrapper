@@ -118,7 +118,11 @@ class PixelInteractive(RodanTask):
                 'Output Mask': {
                     'type': 'boolean',
                     'default': False
-                }
+                },
+                'Crop Image': {
+                    'type': 'boolean',
+                    'default': True
+                },
             },
             'job_queue': 'Python2',
     }
@@ -213,6 +217,26 @@ class PixelInteractive(RodanTask):
         return ('index.html', data)
 
     def run_my_task(self, inputs, settings, outputs):
+        def remove_bg(array):
+            # Create mask for alpha channel
+            layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
+            _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
+            alpha = alpha == 255
+            # Set background to black (reduce size) and then make transparent
+            result = background*(alpha[:,:,np.newaxis])
+
+            return result
+
+        def convert(img):
+            data = img.split(',')[1]    # Remove header from the base 64 string
+            missing_padding = len(data) % 4
+            if missing_padding != 0:
+                data += '=' * (4 - missing_padding % 4)
+            binary_data = a2b_base64(data)   # Parse base 64 image data
+            array = np.fromstring(binary_data, np.uint8)
+
+            return array
+
         if '@done' not in settings:
             return self.WAITING_FOR_INPUT()
 
@@ -220,52 +244,41 @@ class PixelInteractive(RodanTask):
         background = cv.imread(inputs['Image'][0]['resource_path'], cv.IMREAD_UNCHANGED)
         background = cv.cvtColor(background, cv.COLOR_BGR2BGRA)
         output_list=settings['@user_input']    # List passed having the image data (base 64) from all layer
+        # Select Region
+        select_region_array = convert(output_list[len(output_list)-1])
+        select_region = remove_bg(select_region_array)
+        _,_,_,a = cv.split(select_region)
+        x,y,w,h = cv.boundingRect(a)
         # Output path
         outfile_path = outputs["ZIP"][0]['resource_path'] + ".zip"
 
         with zipfile.ZipFile(outfile_path, 'w') as zipMe:        
-            for i in range(0, len(output_list) + 1):
+            for i in range(len(output_list)):
                 # change to bytes 
-                if i != len(output_list):
-                    data = output_list[i].split(',')[1]    # Remove header from the base 64 string
-                missing_padding = len(data) % 4
-
-                if missing_padding != 0:
-                    data += '=' * (4 - missing_padding % 4)
-
-                binary_data = a2b_base64(data)   # Parse base 64 image data
-                array = np.fromstring(binary_data, np.uint8)
+                array = convert(output_list[i])
 
                 if settings['Output Mask']:
                     tmp = cv.imdecode(array, cv.IMREAD_UNCHANGED)
                     retval, buf = cv.imencode('.png', tmp)
-                    if i == len(output_list):
-                        retval, buf = cv.imencode('.png', background)
-                        zipMe.writestr(('Image.png'), buf)
-                    elif i == 0:
-                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
-                    elif i == len(output_list) - 1:
-                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
-                    else:
-                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)  
-                    # cv.imwrite(outfile_path + ".png", tmp)
                 else:
-                    # Create mask for alpha channel
-                    layer_image = cv.imdecode(array, cv.IMREAD_GRAYSCALE)
-                    _, alpha = cv.threshold(layer_image, 1, 255, cv.THRESH_BINARY)
-                    alpha = alpha == 255
-                    # Set background to black (reduce size) and then make transparent
-                    result = background*(alpha[:,:,np.newaxis])
-                    retval, buf = cv.imencode('.png', result)
-                    if i == len(output_list):
-                        retval, buf = cv.imencode('.png', background)
-                        zipMe.writestr(('Image.png'), buf)
-                    elif i == 0:
-                        zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
-                    elif i == len(output_list) - 1:
-                        zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
-                    else:
-                        zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)            
+                    result = remove_bg(array)
+                    if settings['Crop Image']:
+                        result = result[y:y+h, x:x+w]
+                    retval, buf = cv.imencode('.png', result)      
+
+                if i == 0:
+                    zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
+                elif i == len(output_list) - 1:
+                    if settings['Crop Image']:
+                        break
+                    zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
+                else:
+                    zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)
+
+            if settings['Crop Image']:
+                background = background[y:y+h, x:x+w]
+            retval, buf = cv.imencode('.png', background)
+            zipMe.writestr(('Image.png'), buf)
 
         # add the files to the zip file
         os.rename(outfile_path,outputs["ZIP"][0]['resource_path'])
