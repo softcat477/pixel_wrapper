@@ -124,7 +124,7 @@ class PixelInteractive(RodanTask):
                     'default': True
                 },
             },
-            'job_queue': 'Python2',
+            'job_queue': 'Python3',
     }
     enabled = True
     category = 'Diva - Pixel.js'
