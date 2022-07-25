@@ -2,7 +2,7 @@
   description: Plain text
   extension: txt
 - mimetype: image/rgba+png
-  description: rgba png image
+  description: PNG image file with alpha channel
   extension: png
 - mimetype: application/zip
   description: zip file
