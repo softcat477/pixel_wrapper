@@ -119,10 +119,10 @@ class PixelInteractive(RodanTask):
                     'type': 'boolean',
                     'default': False
                 },
-                'Crop Image': {
-                    'type': 'boolean',
-                    'default': True
-                },
+                # 'Crop Image': {
+                #     'type': 'boolean',
+                #     'default': True
+                # },
             },
             'job_queue': 'Python3',
     }
@@ -262,21 +262,21 @@ class PixelInteractive(RodanTask):
                     retval, buf = cv.imencode('.png', tmp)
                 else:
                     result = remove_bg(array)
-                    if settings['Crop Image']:
-                        result = result[y:y+h, x:x+w]
+                    # if settings['Crop Image']:
+                    #     result = result[y:y+h, x:x+w]
                     retval, buf = cv.imencode('.png', result)      
 
                 if i == 0:
                     zipMe.writestr(('rgba PNG - Layer 0 (Background).png'), buf)
                 elif i == len(output_list) - 1:
-                    if settings['Crop Image']:
-                        break
+                    # if settings['Crop Image']:
+                    #     break
                     zipMe.writestr(('rgba PNG - Selected regions.png'), buf)
                 else:
                     zipMe.writestr(('rgba PNG - Layer {0}.png').format(i), buf)
 
-            if settings['Crop Image']:
-                background = background[y:y+h, x:x+w]
+            # if settings['Crop Image']:
+            #     background = background[y:y+h, x:x+w]
             retval, buf = cv.imencode('.png', background)
             zipMe.writestr(('Image.png'), buf)
 
